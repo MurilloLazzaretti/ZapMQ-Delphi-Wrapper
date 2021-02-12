@@ -3,12 +3,12 @@ unit ZApMQ.Handler;
 interface
 
 uses
-  JSON;
+  ZapMQ.Message.JSON, JSON;
 
 type
-  TZapMQHanlder = reference to procedure(pMessage : TJSONObject;
-    var pProcessing : boolean);
-
+  TZapMQHanlder = reference to function(pMessage : TZapJSONMessage;
+    var pProcessing : boolean) : TJSONObject;
+  TZapMQHandlerRPC = reference to procedure(pMessage : TJSONObject);
 implementation
 
 end.

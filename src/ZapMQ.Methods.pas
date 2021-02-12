@@ -1,6 +1,6 @@
 // 
 // Created by the DataSnap proxy generator.
-// 12/02/2021 10:38:27
+// 12/02/2021 18:19:44
 // 
 
 unit ZapMQ.Methods;
@@ -14,14 +14,16 @@ type
   private
     FGetMessageCommand: TDSRestCommand;
     FUpdateMessageCommand: TDSRestCommand;
-    FUpdateMessageCommand_Cache: TDSRestCommand;
+    FUpdateRPCResponseCommand: TDSRestCommand;
+    FGetRPCResponseCommand: TDSRestCommand;
   public
     constructor Create(ARestConnection: TDSRestConnection); overload;
     constructor Create(ARestConnection: TDSRestConnection; AInstanceOwner: Boolean); overload;
     destructor Destroy; override;
     function GetMessage(pQueueName: string; const ARequestFilter: string = ''): string;
-    function UpdateMessage(pQueueName: string; pMessage: string; pTTL: Word; const ARequestFilter: string = ''): TJSONValue;
-    function UpdateMessage_Cache(pQueueName: string; pMessage: string; pTTL: Word; const ARequestFilter: string = ''): IDSRestCachedJSONValue;
+    function UpdateMessage(pQueueName: string; pMessage: string; const ARequestFilter: string = ''): string;
+    function UpdateRPCResponse(pQueueName: string; pIdMessage: string; pResponse: string; const ARequestFilter: string = ''): string;
+    function GetRPCResponse(pQueueName: string; pIdMessage: string; const ARequestFilter: string = ''): string;
   end;
 
 const
@@ -31,20 +33,26 @@ const
     (Name: ''; Direction: 4; DBXType: 26; TypeName: 'string')
   );
 
-  TZapMethods_UpdateMessage: array [0..3] of TDSRestParameterMetaData =
+  TZapMethods_UpdateMessage: array [0..2] of TDSRestParameterMetaData =
   (
     (Name: 'pQueueName'; Direction: 1; DBXType: 26; TypeName: 'string'),
     (Name: 'pMessage'; Direction: 1; DBXType: 26; TypeName: 'string'),
-    (Name: 'pTTL'; Direction: 1; DBXType: 12; TypeName: 'Word'),
-    (Name: ''; Direction: 4; DBXType: 37; TypeName: 'TJSONValue')
+    (Name: ''; Direction: 4; DBXType: 26; TypeName: 'string')
   );
 
-  TZapMethods_UpdateMessage_Cache: array [0..3] of TDSRestParameterMetaData =
+  TZapMethods_UpdateRPCResponse: array [0..3] of TDSRestParameterMetaData =
   (
     (Name: 'pQueueName'; Direction: 1; DBXType: 26; TypeName: 'string'),
-    (Name: 'pMessage'; Direction: 1; DBXType: 26; TypeName: 'string'),
-    (Name: 'pTTL'; Direction: 1; DBXType: 12; TypeName: 'Word'),
-    (Name: ''; Direction: 4; DBXType: 26; TypeName: 'String')
+    (Name: 'pIdMessage'; Direction: 1; DBXType: 26; TypeName: 'string'),
+    (Name: 'pResponse'; Direction: 1; DBXType: 26; TypeName: 'string'),
+    (Name: ''; Direction: 4; DBXType: 26; TypeName: 'string')
+  );
+
+  TZapMethods_GetRPCResponse: array [0..2] of TDSRestParameterMetaData =
+  (
+    (Name: 'pQueueName'; Direction: 1; DBXType: 26; TypeName: 'string'),
+    (Name: 'pIdMessage'; Direction: 1; DBXType: 26; TypeName: 'string'),
+    (Name: ''; Direction: 4; DBXType: 26; TypeName: 'string')
   );
 
 implementation
@@ -63,7 +71,7 @@ begin
   Result := FGetMessageCommand.Parameters[1].Value.GetWideString;
 end;
 
-function TZapMethodsClient.UpdateMessage(pQueueName: string; pMessage: string; pTTL: Word; const ARequestFilter: string): TJSONValue;
+function TZapMethodsClient.UpdateMessage(pQueueName: string; pMessage: string; const ARequestFilter: string): string;
 begin
   if FUpdateMessageCommand = nil then
   begin
@@ -74,25 +82,39 @@ begin
   end;
   FUpdateMessageCommand.Parameters[0].Value.SetWideString(pQueueName);
   FUpdateMessageCommand.Parameters[1].Value.SetWideString(pMessage);
-  FUpdateMessageCommand.Parameters[2].Value.SetUInt16(pTTL);
   FUpdateMessageCommand.Execute(ARequestFilter);
-  Result := TJSONValue(FUpdateMessageCommand.Parameters[3].Value.GetJSONValue(FInstanceOwner));
+  Result := FUpdateMessageCommand.Parameters[2].Value.GetWideString;
 end;
 
-function TZapMethodsClient.UpdateMessage_Cache(pQueueName: string; pMessage: string; pTTL: Word; const ARequestFilter: string): IDSRestCachedJSONValue;
+function TZapMethodsClient.UpdateRPCResponse(pQueueName: string; pIdMessage: string; pResponse: string; const ARequestFilter: string): string;
 begin
-  if FUpdateMessageCommand_Cache = nil then
+  if FUpdateRPCResponseCommand = nil then
   begin
-    FUpdateMessageCommand_Cache := FConnection.CreateCommand;
-    FUpdateMessageCommand_Cache.RequestType := 'GET';
-    FUpdateMessageCommand_Cache.Text := 'TZapMethods.UpdateMessage';
-    FUpdateMessageCommand_Cache.Prepare(TZapMethods_UpdateMessage_Cache);
+    FUpdateRPCResponseCommand := FConnection.CreateCommand;
+    FUpdateRPCResponseCommand.RequestType := 'GET';
+    FUpdateRPCResponseCommand.Text := 'TZapMethods.UpdateRPCResponse';
+    FUpdateRPCResponseCommand.Prepare(TZapMethods_UpdateRPCResponse);
   end;
-  FUpdateMessageCommand_Cache.Parameters[0].Value.SetWideString(pQueueName);
-  FUpdateMessageCommand_Cache.Parameters[1].Value.SetWideString(pMessage);
-  FUpdateMessageCommand_Cache.Parameters[2].Value.SetUInt16(pTTL);
-  FUpdateMessageCommand_Cache.ExecuteCache(ARequestFilter);
-  Result := TDSRestCachedJSONValue.Create(FUpdateMessageCommand_Cache.Parameters[3].Value.GetString);
+  FUpdateRPCResponseCommand.Parameters[0].Value.SetWideString(pQueueName);
+  FUpdateRPCResponseCommand.Parameters[1].Value.SetWideString(pIdMessage);
+  FUpdateRPCResponseCommand.Parameters[2].Value.SetWideString(pResponse);
+  FUpdateRPCResponseCommand.Execute(ARequestFilter);
+  Result := FUpdateRPCResponseCommand.Parameters[3].Value.GetWideString;
+end;
+
+function TZapMethodsClient.GetRPCResponse(pQueueName: string; pIdMessage: string; const ARequestFilter: string): string;
+begin
+  if FGetRPCResponseCommand = nil then
+  begin
+    FGetRPCResponseCommand := FConnection.CreateCommand;
+    FGetRPCResponseCommand.RequestType := 'GET';
+    FGetRPCResponseCommand.Text := 'TZapMethods.GetRPCResponse';
+    FGetRPCResponseCommand.Prepare(TZapMethods_GetRPCResponse);
+  end;
+  FGetRPCResponseCommand.Parameters[0].Value.SetWideString(pQueueName);
+  FGetRPCResponseCommand.Parameters[1].Value.SetWideString(pIdMessage);
+  FGetRPCResponseCommand.Execute(ARequestFilter);
+  Result := FGetRPCResponseCommand.Parameters[2].Value.GetWideString;
 end;
 
 constructor TZapMethodsClient.Create(ARestConnection: TDSRestConnection);
@@ -109,7 +131,8 @@ destructor TZapMethodsClient.Destroy;
 begin
   FGetMessageCommand.DisposeOf;
   FUpdateMessageCommand.DisposeOf;
-  FUpdateMessageCommand_Cache.DisposeOf;
+  FUpdateRPCResponseCommand.DisposeOf;
+  FGetRPCResponseCommand.DisposeOf;
   inherited;
 end;
 

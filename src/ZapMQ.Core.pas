@@ -3,7 +3,7 @@ unit ZapMQ.Core;
 interface
 
 uses
-  Datasnap.DSClientRest, JSON, ZapMQ.Queue, Generics.Collections,
+  Datasnap.DSClientRest, JSON, ZapMQ.Queue, Generics.Collections,ZapMQ.Message.JSON,
   ZapMQ.Handler;
 
 type
@@ -16,9 +16,10 @@ type
   public
     property Connection : TDSRestConnection read FConnection write SetConnection;
     property Queues : TObjectList<TZapMQQueue> read FQueues write SetQueues;
-    function GetMessage(const pQueueName : string) : TJSONObject;
-    function SendMessage(const pQueueName : string; const pMessage : TJSONObject;
-      const pTTL : Word = 0) : boolean;
+    function GetMessage(const pQueueName : string) : TZapJSONMessage;
+    function GetRPCResponse(const pQueueName, pIdMessage : string) : string;
+    function SendMessage(const pQueueName : string; const pMessage : TZapJSONMessage) : string;
+    procedure SendRPCResponse(const pQueueName, pIdMessage, pResponse: string);
     function FindQueue(const pQueueName : string) : TZapMQQueue;
     constructor Create(const pHost : string; const pPort : integer); overload;
     destructor Destroy; override;
@@ -62,7 +63,7 @@ begin
   end;
 end;
 
-function TZapMQ.GetMessage(const pQueueName: string): TJSONObject;
+function TZapMQ.GetMessage(const pQueueName: string): TZapJSONMessage;
 var
   Methods : TZapMethodsClient;
   Content : string;
@@ -73,31 +74,61 @@ begin
       Content := Methods.GetMessage(pQueueName);
       if Content <> string.Empty then
       begin
-        Result := TJSONObject.ParseJSONValue(
-          TEncoding.ASCII.GetBytes(Content), 0) as TJSONObject;
+        Result := TZapJSONMessage.FromJSON(Content);
       end
       else
         Result := nil;
     except
-      //raise Exception.Create('Error getting message from ZapMQ Server');
+      raise Exception.Create('Error getting message from ZapMQ Server');
     end;
   finally
     Methods.Free;
   end;
 end;
 
-function TZapMQ.SendMessage(const pQueueName: string;
-  const pMessage: TJSONObject; const pTTL: Word): boolean;
+function TZapMQ.GetRPCResponse(const pQueueName, pIdMessage: string): string;
 var
   Methods : TZapMethodsClient;
 begin
   Methods := TZapMethodsClient.Create(FConnection);
   try
     try
-      Result := True;
-      Methods.UpdateMessage(pQueueName, pMessage.ToString, pTTL);
+      rESULT := Methods.GetRPCResponse(pQueueName, pIdMessage);
+    except
+      raise Exception.Create('Error getting RPC message from ZapMQ Server');
+    end;
+  finally
+    Methods.Free;
+  end;
+end;
+
+function TZapMQ.SendMessage(const pQueueName : string;
+  const pMessage : TZapJSONMessage) : string;
+var
+  Methods : TZapMethodsClient;
+begin
+  Methods := TZapMethodsClient.Create(FConnection);
+  try
+    try
+      Result := Methods.UpdateMessage(pQueueName, pMessage.ToJSON.ToString);
     except
       raise Exception.Create('Error sending message to ZapMQ Server');
+    end;
+  finally
+    Methods.Free;
+  end;
+end;
+
+procedure TZapMQ.SendRPCResponse(const pQueueName, pIdMessage, pResponse: string);
+var
+  Methods : TZapMethodsClient;
+begin
+  Methods := TZapMethodsClient.Create(FConnection);
+  try
+    try
+      Methods.UpdateRPCResponse(pQueueName, pIdMessage, pResponse);
+    except
+      raise Exception.Create('Error sending RPC response to ZapMQ Server');
     end;
   finally
     Methods.Free;
