@@ -9,13 +9,17 @@ uses
 type
   TZapMQ = class
   private
-    FConnection : TDSRestConnection;
     FQueues : TObjectList<TZapMQQueue>;
+    FPort: Word;
+    FHost: string;
     procedure SetQueues(const Value: TObjectList<TZapMQQueue>);
-    procedure SetConnection(const Value: TDSRestConnection);
+    procedure SetHost(const Value: string);
+    procedure SetPort(const Value: Word);
+    function CreateRestConnection : TDSRestConnection;
   public
-    property Connection : TDSRestConnection read FConnection write SetConnection;
     property Queues : TObjectList<TZapMQQueue> read FQueues write SetQueues;
+    property Host : string read FHost write SetHost;
+    property Port : Word read FPort write SetPort;
     function GetMessage(const pQueueName : string) : TZapJSONMessage;
     function GetRPCResponse(const pQueueName, pIdMessage : string) : string;
     function SendMessage(const pQueueName : string; const pMessage : TZapJSONMessage) : string;
@@ -35,16 +39,21 @@ uses
 constructor TZapMQ.Create(const pHost: string; const pPort: integer);
 begin
   FQueues := TObjectList<TZapMQQueue>.Create(True);
-  FConnection := TDSRestConnection.Create(nil);
-  FConnection.Host := pHost;
-  FConnection.Port := pPort;
-  FConnection.LoginPrompt := False;
+  FHost := pHost;
+  FPort := pPort;
+end;
+
+function TZapMQ.CreateRestConnection: TDSRestConnection;
+begin
+  Result := TDSRestConnection.Create(nil);
+  Result.LoginPrompt := False;
+  Result.Host := FHost;
+  Result.Port := FPort;
 end;
 
 destructor TZapMQ.Destroy;
 begin
   FQueues.Free;
-  FConnection.Free;
   inherited;
 end;
 
@@ -65,79 +74,111 @@ end;
 
 function TZapMQ.GetMessage(const pQueueName: string): TZapJSONMessage;
 var
+  Connection : TDSRestConnection;
   Methods : TZapMethodsClient;
   Content : string;
 begin
-  Methods := TZapMethodsClient.Create(FConnection);
+  Connection := CreateRestConnection;
   try
+    Methods := TZapMethodsClient.Create(Connection);
     try
-      Content := Methods.GetMessage(pQueueName);
-      if Content <> string.Empty then
-      begin
-        Result := TZapJSONMessage.FromJSON(Content);
-      end
-      else
+      try
+        Content := Methods.GetMessage(pQueueName);
+        if Content <> string.Empty then
+        begin
+          Result := TZapJSONMessage.FromJSON(Content);
+        end
+        else
+          Result := nil;
+      except
         Result := nil;
-    except
-      raise Exception.Create('Error getting message from ZapMQ Server');
+      end;
+    finally
+      Methods.Free;
     end;
   finally
-    Methods.Free;
+    Connection.Free;
   end;
 end;
 
 function TZapMQ.GetRPCResponse(const pQueueName, pIdMessage: string): string;
 var
+  Connection : TDSRestConnection;
   Methods : TZapMethodsClient;
 begin
-  Methods := TZapMethodsClient.Create(FConnection);
+  Connection := CreateRestConnection;
   try
+    Methods := TZapMethodsClient.Create(Connection);
     try
-      rESULT := Methods.GetRPCResponse(pQueueName, pIdMessage);
-    except
-      raise Exception.Create('Error getting RPC message from ZapMQ Server');
+      try
+        Result := Methods.GetRPCResponse(pQueueName, pIdMessage);
+      except
+        raise Exception.Create('Error getting RPC message from ZapMQ Server');
+      end;
+    finally
+      Methods.Free;
     end;
   finally
-    Methods.Free;
+    Connection.Free;
   end;
 end;
 
 function TZapMQ.SendMessage(const pQueueName : string;
   const pMessage : TZapJSONMessage) : string;
 var
+  Connection : TDSRestConnection;
   Methods : TZapMethodsClient;
+  JSON : TJSONObject;
 begin
-  Methods := TZapMethodsClient.Create(FConnection);
+  Connection := CreateRestConnection;
   try
+    Methods := TZapMethodsClient.Create(Connection);
+    JSON := pMessage.ToJSON;
     try
-      Result := Methods.UpdateMessage(pQueueName, pMessage.ToJSON.ToString);
-    except
-      raise Exception.Create('Error sending message to ZapMQ Server');
+      try
+        Result := Methods.UpdateMessage(pQueueName, JSON.ToString);
+      except
+        raise Exception.Create('Error sending message to ZapMQ Server');
+      end;
+    finally
+      JSON.Free;
+      Methods.Free;
     end;
   finally
-    Methods.Free;
+    Connection.Free;
   end;
 end;
 
 procedure TZapMQ.SendRPCResponse(const pQueueName, pIdMessage, pResponse: string);
 var
+  Connection : TDSRestConnection;
   Methods : TZapMethodsClient;
 begin
-  Methods := TZapMethodsClient.Create(FConnection);
+  Connection := CreateRestConnection;
   try
+    Methods := TZapMethodsClient.Create(Connection);
     try
-      Methods.UpdateRPCResponse(pQueueName, pIdMessage, pResponse);
-    except
-      raise Exception.Create('Error sending RPC response to ZapMQ Server');
+      try
+        Methods.UpdateRPCResponse(pQueueName, pIdMessage, pResponse);
+      except
+        raise Exception.Create('Error sending RPC response to ZapMQ Server');
+      end;
+    finally
+      Methods.Free;
     end;
   finally
-    Methods.Free;
+    Connection.Free;
   end;
 end;
 
-procedure TZapMQ.SetConnection(const Value: TDSRestConnection);
+procedure TZapMQ.SetHost(const Value: string);
 begin
-  FConnection := Value;
+  FHost := Value;
+end;
+
+procedure TZapMQ.SetPort(const Value: Word);
+begin
+  FPort := Value;
 end;
 
 procedure TZapMQ.SetQueues(const Value: TObjectList<TZapMQQueue>);

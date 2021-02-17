@@ -1,0 +1,9 @@
+{
+	"name": "ZapMQ-Wrapper",
+	"description": "Delphi Wrapper for ZapMQ",
+	"version": "1.0.0",
+	"homepage": "https://github.com/MurilloLazzaretti/ZapMQ-Wrapper",
+	"mainsrc": "src/",
+	"projects": [],
+	"dependencies": {}
+}

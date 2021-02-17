@@ -1,0 +1,22 @@
+program ZapMQWrapper;
+
+uses
+  Vcl.Forms,
+  uMain in 'uMain.pas' {Form2},
+  ZapMQ.Core in '..\src\ZapMQ.Core.pas',
+  ZApMQ.Handler in '..\src\ZApMQ.Handler.pas',
+  ZapMQ.Message.JSON in '..\src\ZapMQ.Message.JSON.pas',
+  ZapMQ.Methods in '..\src\ZapMQ.Methods.pas',
+  ZapMQ.Queue in '..\src\ZapMQ.Queue.pas',
+  ZapMQ.Thread in '..\src\ZapMQ.Thread.pas',
+  ZapMQ.Wrapper in '..\src\ZapMQ.Wrapper.pas';
+
+{$R *.res}
+
+begin
+  ReportMemoryLeaksOnShutdown := True;
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  Application.CreateForm(TForm2, Form2);
+  Application.Run;
+end.
