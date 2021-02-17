@@ -8,7 +8,7 @@ uses
   ZapMQ.Message.JSON, JSON;
 
 type
-  TForm2 = class(TForm)
+  TFrmMain = class(TForm)
     GroupBox1: TGroupBox;
     Button1: TButton;
     Edit1: TEdit;
@@ -52,20 +52,20 @@ type
   end;
 
 var
-  Form2: TForm2;
+  FrmMain: TFrmMain;
 
 implementation
 
 {$R *.dfm}
 
-procedure TForm2.Button1Click(Sender: TObject);
+procedure TFrmMain.Button1Click(Sender: TObject);
 begin
   ZapMQWrapper.Bind(Edit1.Text, ZapMQHandler);
   ListBox1.AddItem(Edit1.Text, nil);
   Memo1.Lines.Add('*** Binded in '+ Edit1.Text +' ***');
 end;
 
-procedure TForm2.Button2Click(Sender: TObject);
+procedure TFrmMain.Button2Click(Sender: TObject);
 var
   JSON : TJSONObject;
 begin
@@ -81,19 +81,19 @@ begin
   end;
 end;
 
-procedure TForm2.Button3Click(Sender: TObject);
+procedure TFrmMain.Button3Click(Sender: TObject);
 begin
   Memo1.Lines.Clear;
 end;
 
-procedure TForm2.Button4Click(Sender: TObject);
+procedure TFrmMain.Button4Click(Sender: TObject);
 begin
   ZapMQWrapper.UnBind(Edit1.Text);
   ListBox1.Items.Delete(ListBox1.Items.IndexOf(Edit1.Text));
   Memo1.Lines.Add('*** UnBinded in '+ Edit1.Text +' ***');
 end;
 
-procedure TForm2.Button5Click(Sender: TObject);
+procedure TFrmMain.Button5Click(Sender: TObject);
 var
   JSON : TJSONObject;
 begin
@@ -109,39 +109,39 @@ begin
   end;
 end;
 
-procedure TForm2.Button6Click(Sender: TObject);
+procedure TFrmMain.Button6Click(Sender: TObject);
 begin
   ZapMQWrapper.Bind(Edit1.Text, ZapMQHandlerRPCMessage);
   ListBox1.AddItem(Edit1.Text, nil);
   Memo1.Lines.Add('*** Binded in '+ Edit1.Text +' ***');
 end;
 
-procedure TForm2.Button7Click(Sender: TObject);
+procedure TFrmMain.Button7Click(Sender: TObject);
 begin
   ZapMQWrapper.Bind(Edit1.Text, ZapMQHandlerNewPublish);
   ListBox1.AddItem(Edit1.Text, nil);
   Memo1.Lines.Add('*** Binded in '+ Edit1.Text +' ***');
 end;
 
-procedure TForm2.FormClose(Sender: TObject; var Action: TCloseAction);
+procedure TFrmMain.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   ZapMQWrapper.Free;
 end;
 
-procedure TForm2.FormCreate(Sender: TObject);
+procedure TFrmMain.FormCreate(Sender: TObject);
 begin
   ZapMQWrapper := TZapMQWrapper.Create('localhost', 5679);
   ZapMQWrapper.OnRPCExpired := RPCExpired;
   Memo1.Lines.Add('*** ZapMQ Wrapper Started ***');
 end;
 
-procedure TForm2.RPCExpired(const pIdMessage: string);
+procedure TFrmMain.RPCExpired(const pIdMessage: string);
 begin
   Memo1.Lines.Add('*** RPC Message Expired ***');
   Memo1.Lines.Add('Id:' + pIdMessage);
 end;
 
-function TForm2.ZapMQHandler(pMessage : TZapJSONMessage;
+function TFrmMain.ZapMQHandler(pMessage : TZapJSONMessage;
   var pProcessing : boolean) : TJSONObject;
 begin
   Memo1.Lines.Add('*** Processing Message ***');
@@ -152,7 +152,7 @@ begin
   Result := nil;
 end;
 
-function TForm2.ZapMQHandlerNewPublish(pMessage: TZapJSONMessage;
+function TFrmMain.ZapMQHandlerNewPublish(pMessage: TZapJSONMessage;
   var pProcessing: boolean): TJSONObject;
 var
   JSON : TJSONObject;
@@ -175,7 +175,7 @@ begin
   Result := nil;
 end;
 
-function TForm2.ZapMQHandlerRPCMessage(pMessage: TZapJSONMessage;
+function TFrmMain.ZapMQHandlerRPCMessage(pMessage: TZapJSONMessage;
   var pProcessing: boolean): TJSONObject;
 begin
   if pMessage.RPC then
@@ -192,7 +192,7 @@ begin
     Result := nil;
 end;
 
-procedure TForm2.ZapMQHandlerRPC(pMessage: TJSONObject);
+procedure TFrmMain.ZapMQHandlerRPC(pMessage: TJSONObject);
 begin
   Memo1.Lines.Add('*** RPC Answer ***');
   Memo1.Lines.Add(pMessage.ToString);

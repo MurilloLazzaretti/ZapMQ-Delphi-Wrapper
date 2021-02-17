@@ -99,7 +99,7 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="uMain.pas">
-            <Form>Form2</Form>
+            <Form>FrmMain</Form>
             <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="..\src\ZapMQ.Core.pas"/>

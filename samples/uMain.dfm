@@ -1,4 +1,4 @@
-object Form2: TForm2
+object FrmMain: TFrmMain
   Left = 0
   Top = 0
   Caption = 'ZapMQ - Wrapper'
@@ -24,7 +24,6 @@ object Form2: TForm2
     Align = alTop
     Caption = 'Queues'
     TabOrder = 0
-    ExplicitLeft = -2
     object Label5: TLabel
       Left = 5
       Top = 17
@@ -76,8 +75,6 @@ object Form2: TForm2
       Enabled = False
       ItemHeight = 13
       TabOrder = 4
-      ExplicitLeft = 296
-      ExplicitTop = 20
     end
     object Button7: TButton
       Left = 5
@@ -179,8 +176,6 @@ object Form2: TForm2
       Height = 221
       Align = alBottom
       TabOrder = 1
-      ExplicitTop = 71
-      ExplicitWidth = 510
     end
     object Edit3: TEdit
       Left = 433
