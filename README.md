@@ -1,6 +1,6 @@
 ## 🇧🇷 ZapMQ-Delphi-Wrapper 🇧🇷
 
-Wrapper for Delphi to connect to ZapMQ server. With this wrapper you can connect to a ZapMQ server easily and with a low code you can send/recive messages to/from others ZapMQ clients.
+Wrapper for Delphi to connect to [`ZapMQ server.`](https://github.com/MurilloLazzaretti/ZapMQ) With this wrapper you can connect easily and with a low code you can send/recive messages to/from others ZapMQ clients.
 
 ## ⚙️ Installation
 
