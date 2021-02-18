@@ -87,7 +87,6 @@ begin
     TEncoding.ASCII.GetBytes(Body.ToString), 0) as TJSONValue);
   Result.AddPair('RPC', TJSONBool.Create(FRPC));
   Result.AddPair('TTL', TJSONNumber.Create(FTTL));
-  Result.AddPair('Timeout', TJSONNumber.Create(FTimeout));
 end;
 
 end.

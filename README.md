@@ -121,6 +121,23 @@ end;
 
 The code above, send a JSON Object to 'MyQueue' and 'wait' for response asynchronously. This message has a TTL of 5 seconds, so if this message was not processed/answered for any subscriber of this queue in 5 seconds, this message will gonna die in the server and the thread on the publisher too. If you dont want a TTL to your message, send 0, but take care of it, if this this message never process for any subscriber you gonna have a started thread for ever.
 
+_OnRPCExpired_
+
+There is an event on the wrapper that raise when one of your RPC message was expired, this could be useful !
+
+```delphi
+begin
+  ZapMQWrapper.OnRPCExpired := RPCExpired;    
+end;
+
+procedure RPCExpired(const pMessage: TZapJSONMessage);
+begin
+  // Do what you need with the message, for example :
+  Log('Message expired:' pMessage.Id);
+end;
+
+```
+
 _Processing the answer_
 
 ```delphi
