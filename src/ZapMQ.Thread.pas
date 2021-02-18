@@ -3,10 +3,10 @@ unit ZapMQ.Thread;
 interface
 
 uses
-  System.Classes, ZapMQ.Core, ZapMQ.handler;
+  System.Classes, ZapMQ.Core, ZapMQ.handler, ZapMQ.Message.JSON;
 
 type
-  TEventRPCExpired = procedure(const pIdMessage : string) of object;
+  TEventRPCExpired = procedure(const pMessage : TZapJSONMessage) of object;
 
   TZapMQThread = class(TThread)
   private
@@ -20,7 +20,7 @@ type
   private
     FCore : TZapMQ;
     FHandler : TZapMQHandlerRPC;
-    FIDMessage : string;
+    FMessage : TZapJSONMessage;
     FQueueName : string;
     FTTL : Word;
     FBirthTime : Cardinal;
@@ -29,7 +29,7 @@ type
   public
     procedure Execute; override;
     constructor Create(const pHost: string; const pPort : Word; const pHandler : TZapMQHandlerRPC;
-      const pIdMessage : string; const pQueueName : string; const pEventRPCExpired : TEventRPCExpired;
+      const pMessage : TZapJSONMessage; const pQueueName : string; const pEventRPCExpired : TEventRPCExpired;
       const pTTL : Word = 0); overload;
     destructor Destroy; override;
   end;
@@ -37,7 +37,7 @@ type
 implementation
 
 uses
-  ZapMQ.Queue, ZapMQ.Message.JSON, JSON, System.SysUtils;
+  ZapMQ.Queue, JSON, System.SysUtils;
 
 { TZapMQThread }
 
@@ -90,7 +90,7 @@ end;
 { TZapMQRPCThread }
 
 constructor TZapMQRPCThread.Create(const pHost: string; const pPort : Word;
-  const pHandler : TZapMQHandlerRPC; const pIdMessage : string;
+  const pHandler : TZapMQHandlerRPC; const pMessage : TZapJSONMessage;
   const pQueueName : string; const pEventRPCExpired : TEventRPCExpired;
   const pTTL : Word = 0);
 begin
@@ -98,7 +98,7 @@ begin
   FreeOnTerminate := True;
   FCore := TZapMQ.Create(pHost, pPort);
   FHandler := pHandler;
-  FIDMessage := pIdMessage;
+  FMessage := pMessage;
   FQueueName := pQueueName;
   FTTL := pTTL;
   FBirthTime := GetTickCount;
@@ -119,7 +119,7 @@ begin
   inherited;
   while (Response = String.Empty) and (not IsExpired) and (not Terminated) do
   begin
-    Response := FCore.GetRPCResponse(FQueueName, FIDMessage);
+    Response := FCore.GetRPCResponse(FQueueName, FMessage.Id);
     if Response <> string.Empty then
     begin
       RPCAnswer := TJSONObject.ParseJSONValue(
@@ -135,7 +135,7 @@ begin
   if (Response = String.Empty) and (IsExpired) then
   begin
     if Assigned(FEventRPCExpired) then
-      FEventRPCExpired(FIDMessage);
+      FEventRPCExpired(FMessage);
   end;
 end;
 

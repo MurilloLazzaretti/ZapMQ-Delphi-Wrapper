@@ -46,7 +46,7 @@ type
     function ZapMQHandlerNewPublish(pMessage : TZapJSONMessage;
       var pProcessing : boolean) : TJSONObject;
     procedure ZapMQHandlerRPC(pMessage : TJSONObject);
-    procedure RPCExpired(const pIdMessage : string);
+    procedure RPCExpired(const pMessage : TZapJSONMessage);
   public
     ZapMQWrapper : TZapMQWrapper;
   end;
@@ -135,10 +135,10 @@ begin
   Memo1.Lines.Add('*** ZapMQ Wrapper Started ***');
 end;
 
-procedure TFrmMain.RPCExpired(const pIdMessage: string);
+procedure TFrmMain.RPCExpired(const pMessage: TZapJSONMessage);
 begin
   Memo1.Lines.Add('*** RPC Message Expired ***');
-  Memo1.Lines.Add('Id:' + pIdMessage);
+  Memo1.Lines.Add('Id:' + pMessage.Id);
 end;
 
 function TFrmMain.ZapMQHandler(pMessage : TZapJSONMessage;

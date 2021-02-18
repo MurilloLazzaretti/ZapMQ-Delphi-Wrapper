@@ -128,7 +128,6 @@ function TZapMQWrapper.SendRPCMessage(const pQueueName : string; const pMessage 
   const pHandler : TZapMQHandlerRPC; const pTTL : Word = 0) : boolean;
 var
   JSONMessage : TZapJSONMessage;
-  MessageId : string;
   ResponseThread : TZapMQRPCThread;
 begin
   if pQueueName = string.Empty then
@@ -142,14 +141,14 @@ begin
           TEncoding.ASCII.GetBytes(pMessage.ToString), 0) as TJSONObject;
         JSONMessage.RPC := True;
         JSONMessage.TTL := pTTL;
-        MessageId := FCore.SendMessage(pQueueName, JSONMessage);
+        JSONMessage.Id := FCore.SendMessage(pQueueName, JSONMessage);
       finally
         JSONMessage.Free;
       end;
-      if MessageId <> string.Empty then
+      if JSONMessage.Id <> string.Empty then
       begin
         ResponseThread := TZapMQRPCThread.Create(FCore.Host, FCore.Port,
-          pHandler, MessageId, pQueueName, FOnRPCExpired, pTTL);
+          pHandler, JSONMessage, pQueueName, FOnRPCExpired, pTTL);
         FRPCThreadPool.Add(ResponseThread);
         ResponseThread.Start;
         Result := True;
