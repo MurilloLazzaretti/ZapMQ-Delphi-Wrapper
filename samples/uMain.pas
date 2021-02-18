@@ -71,7 +71,7 @@ var
 begin
   JSON := TJSONObject.Create;
   try
-    JSON.AddPair('message', 'message recived');
+    JSON.AddPair('message', 'Message to Send');
     if ZapMQWrapper.SendMessage(Edit2.Text, JSON, StrToInt(Edit4.Text)) then
       Memo1.Lines.Add('*** Message Sended ***')
     else
