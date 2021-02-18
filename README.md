@@ -21,7 +21,7 @@ begin
   ZapMQWrapper := TZapMQWrapper.Create('localhost', 5679);   
 end;
 ```
-Probably ZapMQWrapper var will gona be a Field of a Form in your application or Property in a class, the code above is just for example.
+Probably ZapMQWrapper will gona be a Field of a Form in your application or Property in a class, the code above is just for example.
 
 Dont forget to free ZapMQWrapper when your application will terminate, this will stop all threads and kill others objects. (Please, no memory leak)
 
@@ -179,6 +179,9 @@ begin
     Result := nil;
 end;    
 ```
+⚠️ _Warning_
+
+If you dont tell the tread that you finish to process the message (pProcessing := False), you never recive another one.
 
 🌐 _Exchange_ (Coming soon)
 
