@@ -107,6 +107,7 @@ end;
 
 destructor TZapMQRPCThread.Destroy;
 begin
+  FMessage.Free;
   FCore.Free;
   inherited;
 end;

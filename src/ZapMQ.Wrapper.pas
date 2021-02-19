@@ -136,15 +136,11 @@ begin
   begin
     try
       JSONMessage := TZapJSONMessage.Create;
-      try
-        JSONMessage.Body := TJSONObject.ParseJSONValue(
-          TEncoding.ASCII.GetBytes(pMessage.ToString), 0) as TJSONObject;
-        JSONMessage.RPC := True;
-        JSONMessage.TTL := pTTL;
-        JSONMessage.Id := FCore.SendMessage(pQueueName, JSONMessage);
-      finally
-        JSONMessage.Free;
-      end;
+      JSONMessage.Body := TJSONObject.ParseJSONValue(
+        TEncoding.ASCII.GetBytes(pMessage.ToString), 0) as TJSONObject;
+      JSONMessage.RPC := True;
+      JSONMessage.TTL := pTTL;
+      JSONMessage.Id := FCore.SendMessage(pQueueName, JSONMessage);
       if JSONMessage.Id <> string.Empty then
       begin
         ResponseThread := TZapMQRPCThread.Create(FCore.Host, FCore.Port,
