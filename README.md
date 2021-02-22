@@ -88,7 +88,7 @@ end;
 ```
 ⚠️ _Warning_
 
-If you dont tell the tread that you finish to process the message (pProcessing := False), you never recive another one.
+If you dont tell the thread that you finish to process the message (pProcessing := False), you never recive another one.
 
 🔌 _RPC_ 
 
