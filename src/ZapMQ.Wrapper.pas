@@ -134,12 +134,12 @@ begin
     raise Exception.Create('Inform the Queue name');
   if not IsBinded(pQueueName) then
   begin
+    JSONMessage := TZapJSONMessage.Create;
+    JSONMessage.Body := TJSONObject.ParseJSONValue(
+      TEncoding.ASCII.GetBytes(pMessage.ToString), 0) as TJSONObject;
+    JSONMessage.RPC := True;
+    JSONMessage.TTL := pTTL;
     try
-      JSONMessage := TZapJSONMessage.Create;
-      JSONMessage.Body := TJSONObject.ParseJSONValue(
-        TEncoding.ASCII.GetBytes(pMessage.ToString), 0) as TJSONObject;
-      JSONMessage.RPC := True;
-      JSONMessage.TTL := pTTL;
       JSONMessage.Id := FCore.SendMessage(pQueueName, JSONMessage);
       if JSONMessage.Id <> string.Empty then
       begin
@@ -150,8 +150,12 @@ begin
         Result := True;
       end
       else
+      begin
+        JSONMessage.Free;
         Result := False;
+      end;
     except
+      JSONMessage.Free;
       Result := False;
     end;
   end
