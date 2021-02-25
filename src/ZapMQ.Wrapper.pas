@@ -4,14 +4,15 @@ interface
 
 uses
   ZapMQ.Core, ZapMQ.Thread, ZapMQ.Handler, JSON, Generics.Collections,
-  System.Classes;
+  System.Classes, ZapMQ.Message.RPC;
 
 type
   TZapMQWrapper = class
   private
     FCore : TZapMQ;
     FThread : TZapMQThread;
-    FRPCThreadPool : TThreadList<TZapMQRPCThread>;
+    FRPCThread : TZapMQRPCThread;
+    FRPCMessages : TObjectList<TZapRPCMessage>;
     FOnRPCExpired: TEventRPCExpired;
     procedure SetOnRPCExpired(const Value: TEventRPCExpired);
   public
@@ -53,29 +54,18 @@ end;
 constructor TZapMQWrapper.Create(const pHost: string; const pPort: integer);
 begin
   FCore := TZapMQ.Create(pHost, pPort);
-  FRPCThreadPool := TThreadList<TZapMQRPCThread>.Create;
+  FRPCMessages := TObjectList<TZapRPCMessage>.Create(True);
   FThread := TZapMQThread.Create(FCore);
   FThread.Start;
+  FRPCThread := TZapMQRPCThread.Create(pHost, pPort, FRPCMessages);
+  FRPCThread.Start;
 end;
 
 destructor TZapMQWrapper.Destroy;
-var
-  ThreadList : TList<TZapMQRPCThread>;
-  Thread : TZapMQRPCThread;
 begin
-  FThread.Terminate;
-  while not FThread.Finished do;
-  ThreadList := FRPCThreadPool.LockList;
-  for Thread in ThreadList do
-  begin
-    if not Thread.ExternalThread then
-    begin
-      Thread.Terminate;
-      while not Thread.Finished do
-    end;
-  end;
-  FRPCThreadPool.UnlockList;
-  FRPCThreadPool.Free;
+  FRPCThread.Stop;
+  FThread.Stop;
+  FRPCMessages.Free;
   FCore.Free;
   inherited;
 end;
@@ -128,7 +118,7 @@ function TZapMQWrapper.SendRPCMessage(const pQueueName : string; const pMessage 
   const pHandler : TZapMQHandlerRPC; const pTTL : Word = 0) : boolean;
 var
   JSONMessage : TZapJSONMessage;
-  ResponseThread : TZapMQRPCThread;
+  ZapRPCMessage : TZapRPCMessage;
 begin
   if pQueueName = string.Empty then
     raise Exception.Create('Inform the Queue name');
@@ -143,10 +133,9 @@ begin
       JSONMessage.Id := FCore.SendMessage(pQueueName, JSONMessage);
       if JSONMessage.Id <> string.Empty then
       begin
-        ResponseThread := TZapMQRPCThread.Create(FCore.Host, FCore.Port,
-          pHandler, JSONMessage, pQueueName, FOnRPCExpired, pTTL);
-        FRPCThreadPool.Add(ResponseThread);
-        ResponseThread.Start;
+        FRPCThread.EventRPCExpired := FOnRPCExpired;
+        ZapRPCMessage := TZapRPCMessage.Create(JSONMessage, pHandler, pQueueName);
+        FRPCMessages.Add(ZapRPCMessage);
         Result := True;
       end
       else

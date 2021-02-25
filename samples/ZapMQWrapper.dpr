@@ -9,7 +9,8 @@ uses
   ZapMQ.Methods in '..\src\ZapMQ.Methods.pas',
   ZapMQ.Queue in '..\src\ZapMQ.Queue.pas',
   ZapMQ.Thread in '..\src\ZapMQ.Thread.pas',
-  ZapMQ.Wrapper in '..\src\ZapMQ.Wrapper.pas';
+  ZapMQ.Wrapper in '..\src\ZapMQ.Wrapper.pas',
+  ZapMQ.Message.RPC in '..\src\ZapMQ.Message.RPC.pas';
 
 {$R *.res}
 

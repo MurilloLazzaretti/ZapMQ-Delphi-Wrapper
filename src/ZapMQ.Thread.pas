@@ -3,34 +3,36 @@ unit ZapMQ.Thread;
 interface
 
 uses
-  System.Classes, ZapMQ.Core, ZapMQ.handler, ZapMQ.Message.JSON;
+  System.Classes, ZapMQ.Core, ZapMQ.handler, ZapMQ.Message.JSON, SyncObjs,
+  Generics.Collections, ZapMQ.Message.RPC;
 
 type
   TEventRPCExpired = procedure(const pMessage : TZapJSONMessage) of object;
 
   TZapMQThread = class(TThread)
   private
+    FEvent : TEvent;
     FCore : TZapMQ;
   public
     procedure Execute; override;
+    procedure Stop;
     constructor Create(const pCore : TZapMQ); overload;
+    destructor Destroy; override;
   end;
 
   TZapMQRPCThread = class(TThread)
   private
+    FEvent : TEvent;
     FCore : TZapMQ;
-    FHandler : TZapMQHandlerRPC;
-    FMessage : TZapJSONMessage;
-    FQueueName : string;
-    FTTL : Word;
-    FBirthTime : Cardinal;
     FEventRPCExpired : TEventRPCExpired;
-    function IsExpired : boolean;
+    FRPCMessages : TObjectList<TZapRPCMessage>;
+    procedure SetEventRPCExpired(const Value: TEventRPCExpired);
   public
+    property EventRPCExpired : TEventRPCExpired read FEventRPCExpired write SetEventRPCExpired;
     procedure Execute; override;
-    constructor Create(const pHost: string; const pPort : Word; const pHandler : TZapMQHandlerRPC;
-      const pMessage : TZapJSONMessage; const pQueueName : string; const pEventRPCExpired : TEventRPCExpired;
-      const pTTL : Word = 0); overload;
+    procedure Stop;
+    constructor Create(const pHost: string; const pPort : Word;
+      const pRPCMessages : TObjectList<TZapRPCMessage>); overload;
     destructor Destroy; override;
   end;
 
@@ -46,6 +48,13 @@ begin
   inherited Create(True);
   FreeOnTerminate := True;
   FCore := pCore;
+  FEvent := TEvent.Create(nil, True, False, '');
+end;
+
+destructor TZapMQThread.Destroy;
+begin
+  FEvent.Free;
+  inherited;
 end;
 
 procedure TZapMQThread.Execute;
@@ -68,47 +77,53 @@ begin
         begin
           ProcessingMessage := True;
           try
-            RPCAnswer := Queue.Handler(JSONMessage, ProcessingMessage);
-            if Assigned(RPCAnswer) and (JSONMessage.RPC) then
+            TThread.Synchronize(Current, procedure
             begin
-              try
-                FCore.SendRPCResponse(Queue.Name, JSONMessage.Id, RPCAnswer.ToString);
-              finally
-                RPCAnswer.Free;
+              RPCAnswer := Queue.Handler(JSONMessage, ProcessingMessage);
+              if Assigned(RPCAnswer) and (JSONMessage.RPC) then
+              begin
+                try
+                  FCore.SendRPCResponse(Queue.Name, JSONMessage.Id, RPCAnswer.ToString);
+                finally
+                  RPCAnswer.Free;
+                end;
               end;
-            end;
+            end);
           finally
             JSONMessage.Free;
           end;
         end;
       end;
     end;
-    Sleep(100);
+    if not (FEvent.WaitFor(100) = wrTimeout) then
+    begin
+      Terminate;
+    end;
   end;
+end;
+
+procedure TZapMQThread.Stop;
+begin
+  FEvent.SetEvent;
+  while not Terminated do ;
 end;
 
 { TZapMQRPCThread }
 
 constructor TZapMQRPCThread.Create(const pHost: string; const pPort : Word;
-  const pHandler : TZapMQHandlerRPC; const pMessage : TZapJSONMessage;
-  const pQueueName : string; const pEventRPCExpired : TEventRPCExpired;
-  const pTTL : Word = 0);
+  const pRPCMessages : TObjectList<TZapRPCMessage>);
 begin
   inherited Create(True);
   FreeOnTerminate := True;
   FCore := TZapMQ.Create(pHost, pPort);
-  FHandler := pHandler;
-  FMessage := pMessage;
-  FQueueName := pQueueName;
-  FTTL := pTTL;
-  FBirthTime := GetTickCount;
-  FEventRPCExpired := pEventRPCExpired;
+  FEvent := TEvent.Create(nil, True, False, '');
+  FRPCMessages := pRPCMessages;
 end;
 
 destructor TZapMQRPCThread.Destroy;
 begin
-  FMessage.Free;
   FCore.Free;
+  FEvent.Free;
   inherited;
 end;
 
@@ -116,33 +131,62 @@ procedure TZapMQRPCThread.Execute;
 var
   Response : string;
   RPCAnswer : TJSONObject;
+  ZapMessage : TZapRPCMessage;
+  i : integer;
 begin
   inherited;
-  while (Response = String.Empty) and (not IsExpired) and (not Terminated) do
+  while not Terminated do
   begin
-    Response := FCore.GetRPCResponse(FQueueName, FMessage.Id);
-    if Response <> string.Empty then
+    for i := Pred(FRPCMessages.Count) downto 0 do
     begin
-      RPCAnswer := TJSONObject.ParseJSONValue(
-        TEncoding.ASCII.GetBytes(Response), 0) as TJSONObject;
-      try
-        FHandler(RPCAnswer);
-      finally
-        RPCAnswer.Free;
+      ZapMessage := FRPCMessages[i];
+      Response := FCore.GetRPCResponse(ZapMessage.QueueName, ZapMessage.JSONMessage.Id);
+      if Response <> string.Empty then
+      begin
+        RPCAnswer := TJSONObject.ParseJSONValue(
+          TEncoding.ASCII.GetBytes(Response), 0) as TJSONObject;
+        try
+          Synchronize(nil, procedure
+          begin
+            ZapMessage.Handler(RPCAnswer);
+          end);
+          FRPCMessages.Remove(ZapMessage);
+        finally
+          RPCAnswer.Free;
+        end;
+      end
+      else
+      begin
+        if ZapMessage.IsExpired then
+        begin
+          if Assigned(FEventRPCExpired) then
+          begin
+            Synchronize(nil, procedure
+            begin
+              FEventRPCExpired(ZapMessage.JSONMessage);
+            end);
+          end;
+          FRPCMessages.Remove(ZapMessage);
+        end;
       end;
     end;
-    Sleep(100);
-  end;
-  if (Response = String.Empty) and (IsExpired) then
-  begin
-    if Assigned(FEventRPCExpired) then
-      FEventRPCExpired(FMessage);
+    if not (FEvent.WaitFor(100) = wrTimeout) then
+    begin
+      Terminate;
+    end;
   end;
 end;
 
-function TZapMQRPCThread.IsExpired: boolean;
+procedure TZapMQRPCThread.SetEventRPCExpired(const Value: TEventRPCExpired);
 begin
-  Result := (FTTL > 0) and ((FBirthTime + FTTL) < GetTickCount);
+  FEventRPCExpired := Value;
+end;
+
+procedure TZapMQRPCThread.Stop;
+begin
+  if Assigned(FEvent) then
+    FEvent.SetEvent;
+  while not Terminated do ;
 end;
 
 end.
