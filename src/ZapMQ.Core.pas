@@ -49,8 +49,6 @@ begin
   Result.LoginPrompt := False;
   Result.Host := FHost;
   Result.Port := FPort;
-//  Result.HTTP.ConnectTimeout := 30000;
-//  Result.HTTP.ReadTimeout := 30000;
 end;
 
 destructor TZapMQ.Destroy;
