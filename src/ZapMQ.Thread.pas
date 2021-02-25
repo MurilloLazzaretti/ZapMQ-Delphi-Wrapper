@@ -77,18 +77,15 @@ begin
         begin
           ProcessingMessage := True;
           try
-            TThread.Synchronize(Current, procedure
+            RPCAnswer := Queue.Handler(JSONMessage, ProcessingMessage);
+            if Assigned(RPCAnswer) and (JSONMessage.RPC) then
             begin
-              RPCAnswer := Queue.Handler(JSONMessage, ProcessingMessage);
-              if Assigned(RPCAnswer) and (JSONMessage.RPC) then
-              begin
-                try
-                  FCore.SendRPCResponse(Queue.Name, JSONMessage.Id, RPCAnswer.ToString);
-                finally
-                  RPCAnswer.Free;
-                end;
+              try
+                FCore.SendRPCResponse(Queue.Name, JSONMessage.Id, RPCAnswer.ToString);
+              finally
+                RPCAnswer.Free;
               end;
-            end);
+            end;
           finally
             JSONMessage.Free;
           end;
@@ -146,10 +143,7 @@ begin
         RPCAnswer := TJSONObject.ParseJSONValue(
           TEncoding.ASCII.GetBytes(Response), 0) as TJSONObject;
         try
-          Synchronize(nil, procedure
-          begin
-            ZapMessage.Handler(RPCAnswer);
-          end);
+          ZapMessage.Handler(RPCAnswer);
           FRPCMessages.Remove(ZapMessage);
         finally
           RPCAnswer.Free;
@@ -161,10 +155,7 @@ begin
         begin
           if Assigned(FEventRPCExpired) then
           begin
-            Synchronize(nil, procedure
-            begin
-              FEventRPCExpired(ZapMessage.JSONMessage);
-            end);
+            FEventRPCExpired(ZapMessage.JSONMessage);
           end;
           FRPCMessages.Remove(ZapMessage);
         end;
