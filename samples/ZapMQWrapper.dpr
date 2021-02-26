@@ -10,7 +10,9 @@ uses
   ZapMQ.Queue in '..\src\ZapMQ.Queue.pas',
   ZapMQ.Thread in '..\src\ZapMQ.Thread.pas',
   ZapMQ.Wrapper in '..\src\ZapMQ.Wrapper.pas',
-  ZapMQ.Message.RPC in '..\src\ZapMQ.Message.RPC.pas';
+  ZapMQ.Message.RPC in '..\src\ZapMQ.Message.RPC.pas',
+  BenchMark in 'BenchMark.pas',
+  BenchMarkResults in 'BenchMarkResults.pas';
 
 {$R *.res}
 

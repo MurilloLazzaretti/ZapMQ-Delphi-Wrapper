@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Datasnap.DSClientRest, Vcl.StdCtrls, ZapMQ.Wrapper,
-  ZapMQ.Message.JSON, JSON;
+  ZapMQ.Message.JSON, JSON, Vcl.WinXCtrls;
 
 type
   TFrmMain = class(TForm)
@@ -29,6 +29,14 @@ type
     Label1: TLabel;
     Edit3: TEdit;
     Button7: TButton;
+    Button9: TButton;
+    ActivityIndicator1: TActivityIndicator;
+    Button8: TButton;
+    Edit5: TEdit;
+    Edit6: TEdit;
+    Label2: TLabel;
+    Label4: TLabel;
+    Button10: TButton;
     procedure Button2Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure Button1Click(Sender: TObject);
@@ -38,10 +46,15 @@ type
     procedure Button5Click(Sender: TObject);
     procedure Button6Click(Sender: TObject);
     procedure Button7Click(Sender: TObject);
+    procedure Button8Click(Sender: TObject);
+    procedure Button9Click(Sender: TObject);
+    procedure Button10Click(Sender: TObject);
   private
     function ZapMQHandler(pMessage : TZapJSONMessage;
       var pProcessing : boolean) : TJSONObject;
     function ZapMQHandlerRPCMessage(pMessage : TZapJSONMessage;
+      var pProcessing : boolean) : TJSONObject;
+    function ZapMQHandlerBenchMark(pMessage : TZapJSONMessage;
       var pProcessing : boolean) : TJSONObject;
     function ZapMQHandlerNewPublish(pMessage : TZapJSONMessage;
       var pProcessing : boolean) : TJSONObject;
@@ -56,7 +69,21 @@ var
 
 implementation
 
+uses
+  BenchMark;
+
 {$R *.dfm}
+
+procedure TFrmMain.Button10Click(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 1 to StrToInt(Edit5.Text) do
+  begin
+    ZapMQWrapper.UnBind('BenchMark' + I.ToString);
+    Memo1.Lines.Add('*** UnBinded in '+ 'BenchMark' + I.ToString +' ***');
+  end;
+end;
 
 procedure TFrmMain.Button1Click(Sender: TObject);
 begin
@@ -101,7 +128,7 @@ begin
   try
     JSON.AddPair('RPC', 'RPC message recived');
     if ZapMQWrapper.SendRPCMessage(Edit2.Text, JSON, ZapMQHandlerRPC, StrToInt(Edit4.Text)) then
-      Memo1.Lines.Add('*** RPC Message Sended ***')
+      Memo1.Lines.Add('*** RPC Message Sended '+ FormatDateTime('hh:mm:ss.zzz', now)+' ***')
     else
       Memo1.Lines.Add('*** Error to Send RPC Message ***');
   finally
@@ -121,6 +148,29 @@ begin
   ZapMQWrapper.Bind(Edit1.Text, ZapMQHandlerNewPublish);
   ListBox1.AddItem(Edit1.Text, nil);
   Memo1.Lines.Add('*** Binded in '+ Edit1.Text +' ***');
+end;
+
+procedure TFrmMain.Button8Click(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 1 to StrToInt(Edit5.Text) do
+  begin
+    ZapMQWrapper.Bind('BenchMark' + I.ToString, ZapMQHandlerBenchMark);
+    Memo1.Lines.Add('*** Binded in '+ 'BenchMark' + I.ToString +' ***');
+  end;
+end;
+
+procedure TFrmMain.Button9Click(Sender: TObject);
+var
+  BenchMark : TBenchMark;
+begin
+  Button9.Enabled := False;
+  ActivityIndicator1.Animate := True;
+  BenchMark := TBenchMark.Create('localhost', 5679);
+  BenchMark.Cycles := StrToInt(Edit6.Text);
+  BenchMark.Queues := StrToInt(Edit5.Text);
+  BenchMark.Start;
 end;
 
 procedure TFrmMain.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -144,7 +194,7 @@ end;
 function TFrmMain.ZapMQHandler(pMessage : TZapJSONMessage;
   var pProcessing : boolean) : TJSONObject;
 begin
-  Memo1.Lines.Add('*** Processing Message ***');
+  Memo1.Lines.Add('*** Processing Message '+FormatDateTime('hh:mm:ss.zzz', now)+' ***');
   Sleep(StrToInt(Edit3.Text));
   Memo1.Lines.Add(pMessage.Body.ToString);
   pProcessing := False;
@@ -152,12 +202,21 @@ begin
   Result := nil;
 end;
 
+function TFrmMain.ZapMQHandlerBenchMark(pMessage: TZapJSONMessage;
+  var pProcessing: boolean): TJSONObject;
+begin
+  Result := TJSONObject.Create;
+  Result.AddPair('RPC message', 'Answer');
+  //Sleep(StrToInt(Edit3.Text));
+  pProcessing := False;
+end;
+
 function TFrmMain.ZapMQHandlerNewPublish(pMessage: TZapJSONMessage;
   var pProcessing: boolean): TJSONObject;
 var
   JSON : TJSONObject;
 begin
-  Memo1.Lines.Add('*** Processing Message ***');
+  Memo1.Lines.Add('*** Processing Message '+FormatDateTime('hh:mm:ss.zzz', now)+' ***');
   Sleep(StrToInt(Edit3.Text));
   Memo1.Lines.Add(pMessage.Body.ToString);
   pProcessing := False;
@@ -180,7 +239,7 @@ function TFrmMain.ZapMQHandlerRPCMessage(pMessage: TZapJSONMessage;
 begin
   if pMessage.RPC then
   begin
-    Memo1.Lines.Add('*** Processing Message ***');
+    Memo1.Lines.Add('*** Processing Message '+FormatDateTime('hh:mm:ss.zzz', now)+' ***');
     Sleep(StrToInt(Edit3.Text));
     Memo1.Lines.Add(pMessage.Body.ToString);
     Memo1.Lines.Add('*** Message Processed ***');
@@ -194,7 +253,7 @@ end;
 
 procedure TFrmMain.ZapMQHandlerRPC(pMessage: TJSONObject);
 begin
-  Memo1.Lines.Add('*** RPC Answer ***');
+  Memo1.Lines.Add('*** RPC Answer '+FormatDateTime('hh:mm:ss.zzz', now)+' ***');
   Memo1.Lines.Add(pMessage.ToString);
 end;
 

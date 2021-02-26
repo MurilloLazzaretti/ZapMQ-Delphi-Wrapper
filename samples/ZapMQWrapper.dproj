@@ -110,6 +110,8 @@
         <DCCReference Include="..\src\ZapMQ.Thread.pas"/>
         <DCCReference Include="..\src\ZapMQ.Wrapper.pas"/>
         <DCCReference Include="..\src\ZapMQ.Message.RPC.pas"/>
+        <DCCReference Include="BenchMark.pas"/>
+        <DCCReference Include="BenchMarkResults.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

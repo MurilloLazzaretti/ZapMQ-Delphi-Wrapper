@@ -39,7 +39,7 @@ type
 implementation
 
 uses
-  ZapMQ.Queue, JSON, System.SysUtils;
+  ZapMQ.Queue, JSON, System.SysUtils, System.Threading;
 
 { TZapMQThread }
 
@@ -59,29 +59,28 @@ end;
 
 procedure TZapMQThread.Execute;
 var
-  Queue : TZapMQQueue;
-  JSONMessage : TZapJSONMessage;
   ProcessingMessage : boolean;
-  RPCAnswer : TJSONObject;
 begin
   inherited;
-  ProcessingMessage := False;
   while not Terminated do
   begin
     if not ProcessingMessage then
     begin
-      for Queue in FCore.Queues do
+      TParallel.&For(0, Pred(FCore.Queues.Count),
+      procedure(Index: Integer)
+      var
+        JSONMessage : TZapJSONMessage;
+        RPCAnswer : TJSONObject;
       begin
-        JSONMessage := FCore.GetMessage(Queue.Name);
+        JSONMessage := FCore.GetMessage(FCore.Queues[Index].Name);
         if Assigned(JSONMessage) then
         begin
-          ProcessingMessage := True;
           try
-            RPCAnswer := Queue.Handler(JSONMessage, ProcessingMessage);
+            RPCAnswer := FCore.Queues[Index].Handler(JSONMessage, ProcessingMessage);
             if Assigned(RPCAnswer) and (JSONMessage.RPC) then
             begin
               try
-                FCore.SendRPCResponse(Queue.Name, JSONMessage.Id, RPCAnswer.ToString);
+                FCore.SendRPCResponse(FCore.Queues[Index].Name, JSONMessage.Id, RPCAnswer.ToString);
               finally
                 RPCAnswer.Free;
               end;
@@ -90,9 +89,9 @@ begin
             JSONMessage.Free;
           end;
         end;
-      end;
+      end);
     end;
-    if not (FEvent.WaitFor(100) = wrTimeout) then
+    if not (FEvent.WaitFor(10) = wrTimeout) then
     begin
       Terminate;
     end;
