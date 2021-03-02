@@ -2,8 +2,8 @@ object FrmMain: TFrmMain
   Left = 0
   Top = 0
   Caption = 'ZapMQ - Wrapper'
-  ClientHeight = 560
-  ClientWidth = 520
+  ClientHeight = 738
+  ClientWidth = 533
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -19,11 +19,12 @@ object FrmMain: TFrmMain
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 514
-    Height = 126
+    Width = 527
+    Height = 163
     Align = alTop
     Caption = 'Queues'
     TabOrder = 0
+    ExplicitWidth = 722
     object Label5: TLabel
       Left = 5
       Top = 17
@@ -67,14 +68,16 @@ object FrmMain: TFrmMain
     end
     object ListBox1: TListBox
       AlignWithMargins = True
-      Left = 352
+      Left = 365
       Top = 18
       Width = 157
-      Height = 103
+      Height = 140
       Align = alRight
       Enabled = False
       ItemHeight = 13
       TabOrder = 4
+      ExplicitLeft = 352
+      ExplicitHeight = 103
     end
     object Button7: TButton
       Left = 5
@@ -89,9 +92,9 @@ object FrmMain: TFrmMain
   object GroupBox2: TGroupBox
     AlignWithMargins = True
     Left = 3
-    Top = 135
-    Width = 514
-    Height = 137
+    Top = 172
+    Width = 527
+    Height = 101
     Align = alTop
     Caption = 'Messages'
     TabOrder = 1
@@ -108,20 +111,6 @@ object FrmMain: TFrmMain
       Width = 69
       Height = 13
       Caption = 'Queue Name :'
-    end
-    object Label2: TLabel
-      Left = 288
-      Top = 47
-      Width = 38
-      Height = 13
-      Caption = 'Cycles :'
-    end
-    object Label4: TLabel
-      Left = 288
-      Top = 88
-      Width = 44
-      Height = 13
-      Caption = 'Queues :'
     end
     object Button2: TButton
       Left = 5
@@ -156,63 +145,18 @@ object FrmMain: TFrmMain
       TabOrder = 3
       Text = '0'
     end
-    object Button9: TButton
-      Left = 389
-      Top = 62
-      Width = 122
-      Height = 25
-      Caption = 'Start Send BenchMark'
-      TabOrder = 4
-      OnClick = Button9Click
-    end
-    object ActivityIndicator1: TActivityIndicator
-      Left = 433
-      Top = 93
-    end
-    object Button8: TButton
-      Left = 288
-      Top = 16
-      Width = 93
-      Height = 25
-      Caption = 'BenchMark Bind'
-      TabOrder = 6
-      OnClick = Button8Click
-    end
-    object Edit5: TEdit
-      Left = 288
-      Top = 105
-      Width = 54
-      Height = 21
-      TabOrder = 7
-      Text = '3'
-    end
-    object Edit6: TEdit
-      Left = 288
-      Top = 65
-      Width = 54
-      Height = 21
-      TabOrder = 8
-      Text = '5'
-    end
-    object Button10: TButton
-      Left = 389
-      Top = 16
-      Width = 122
-      Height = 25
-      Caption = 'BenchMark UnBind'
-      TabOrder = 9
-      OnClick = Button10Click
-    end
   end
   object GroupBox3: TGroupBox
     AlignWithMargins = True
     Left = 3
-    Top = 278
-    Width = 514
+    Top = 456
+    Width = 527
     Height = 279
     Align = alBottom
     Caption = 'Process'
     TabOrder = 2
+    ExplicitTop = 278
+    ExplicitWidth = 514
     object Label1: TLabel
       Left = 354
       Top = 28
@@ -233,10 +177,11 @@ object FrmMain: TFrmMain
       AlignWithMargins = True
       Left = 5
       Top = 53
-      Width = 504
+      Width = 517
       Height = 221
       Align = alBottom
       TabOrder = 1
+      ExplicitWidth = 504
     end
     object Edit3: TEdit
       Left = 433
@@ -245,6 +190,113 @@ object FrmMain: TFrmMain
       Height = 21
       TabOrder = 2
       Text = '1000'
+    end
+  end
+  object GroupBox4: TGroupBox
+    AlignWithMargins = True
+    Left = 3
+    Top = 279
+    Width = 527
+    Height = 177
+    Align = alTop
+    Caption = 'BenchMark'
+    TabOrder = 3
+    ExplicitTop = 319
+    ExplicitWidth = 722
+    object Label2: TLabel
+      Left = 131
+      Top = 64
+      Width = 38
+      Height = 13
+      Caption = 'Cycles :'
+    end
+    object Label4: TLabel
+      Left = 117
+      Top = 16
+      Width = 44
+      Height = 13
+      Caption = 'Queues :'
+    end
+    object Label7: TLabel
+      Left = 194
+      Top = 63
+      Width = 24
+      Height = 13
+      Caption = 'TTL :'
+    end
+    object Button8: TButton
+      Left = 5
+      Top = 31
+      Width = 93
+      Height = 25
+      Caption = 'BenchMark Bind'
+      TabOrder = 0
+      OnClick = Button8Click
+    end
+    object Edit6: TEdit
+      Left = 131
+      Top = 82
+      Width = 54
+      Height = 21
+      TabOrder = 1
+      Text = '5'
+    end
+    object Edit5: TEdit
+      Left = 117
+      Top = 33
+      Width = 54
+      Height = 21
+      TabOrder = 2
+      Text = '3'
+    end
+    object ActivityIndicator1: TActivityIndicator
+      Left = 42
+      Top = 110
+    end
+    object Button9: TButton
+      Left = 3
+      Top = 79
+      Width = 122
+      Height = 25
+      Caption = 'Start Send BenchMark'
+      TabOrder = 4
+      OnClick = Button9Click
+    end
+    object Button10: TButton
+      Left = 181
+      Top = 31
+      Width = 122
+      Height = 25
+      Caption = 'BenchMark UnBind'
+      TabOrder = 5
+      OnClick = Button10Click
+    end
+    object RadioGroup1: TRadioGroup
+      AlignWithMargins = True
+      Left = 392
+      Top = 18
+      Width = 130
+      Height = 154
+      Align = alRight
+      Caption = 'Priority'
+      ItemIndex = 2
+      Items.Strings = (
+        'Low'
+        'Medium Low'
+        'Medium'
+        'Medium High'
+        'High')
+      TabOrder = 6
+      ExplicitLeft = 394
+      ExplicitTop = 17
+    end
+    object Edit7: TEdit
+      Left = 194
+      Top = 82
+      Width = 60
+      Height = 21
+      TabOrder = 7
+      Text = '5000'
     end
   end
 end

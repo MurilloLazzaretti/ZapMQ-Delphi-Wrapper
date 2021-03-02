@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Datasnap.DSClientRest, Vcl.StdCtrls, ZapMQ.Wrapper,
-  ZapMQ.Message.JSON, JSON, Vcl.WinXCtrls;
+  ZapMQ.Message.JSON, JSON, Vcl.WinXCtrls, BenchMark, Vcl.ExtCtrls;
 
 type
   TFrmMain = class(TForm)
@@ -29,14 +29,18 @@ type
     Label1: TLabel;
     Edit3: TEdit;
     Button7: TButton;
-    Button9: TButton;
-    ActivityIndicator1: TActivityIndicator;
+    GroupBox4: TGroupBox;
     Button8: TButton;
-    Edit5: TEdit;
     Edit6: TEdit;
     Label2: TLabel;
+    Edit5: TEdit;
     Label4: TLabel;
+    ActivityIndicator1: TActivityIndicator;
+    Button9: TButton;
     Button10: TButton;
+    RadioGroup1: TRadioGroup;
+    Label7: TLabel;
+    Edit7: TEdit;
     procedure Button2Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure Button1Click(Sender: TObject);
@@ -61,6 +65,7 @@ type
     procedure ZapMQHandlerRPC(pMessage : TJSONObject);
     procedure RPCExpired(const pMessage : TZapJSONMessage);
   public
+    BenchMark : TBenchMark;
     ZapMQWrapper : TZapMQWrapper;
   end;
 
@@ -70,7 +75,7 @@ var
 implementation
 
 uses
-  BenchMark;
+  ZapMQ.Queue;
 
 {$R *.dfm}
 
@@ -153,28 +158,41 @@ end;
 procedure TFrmMain.Button8Click(Sender: TObject);
 var
   I: Integer;
+  Priority : TZapMQQueuePriority;
 begin
+  case RadioGroup1.ItemIndex of
+    0: Priority := TZapMQQueuePriority.mqpLow;
+    1: Priority := TZapMQQueuePriority.mqpMediumLow;
+    2: Priority := TZapMQQueuePriority.mqpMedium;
+    3: Priority := TZapMQQueuePriority.mqpMediumHigh;
+    4: Priority := TZapMQQueuePriority.mqpHigh;
+    else
+      Priority := TZapMQQueuePriority.mqpMedium;
+  end;
   for I := 1 to StrToInt(Edit5.Text) do
   begin
-    ZapMQWrapper.Bind('BenchMark' + I.ToString, ZapMQHandlerBenchMark);
+    ZapMQWrapper.Bind('BenchMark' + I.ToString, ZapMQHandlerBenchMark, Priority);
     Memo1.Lines.Add('*** Binded in '+ 'BenchMark' + I.ToString +' ***');
   end;
 end;
 
 procedure TFrmMain.Button9Click(Sender: TObject);
-var
-  BenchMark : TBenchMark;
 begin
   Button9.Enabled := False;
   ActivityIndicator1.Animate := True;
-  BenchMark := TBenchMark.Create('localhost', 5679);
   BenchMark.Cycles := StrToInt(Edit6.Text);
   BenchMark.Queues := StrToInt(Edit5.Text);
-  BenchMark.Start;
+  BenchMark.TTL := StrToInt(Edit7.Text);
+  if not BenchMark.Started then
+    BenchMark.Start
+  else
+    BenchMark.SyncEvent.SetEvent;
 end;
 
 procedure TFrmMain.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
+  BenchMark.Stop;
+  BenchMark.Free;
   ZapMQWrapper.Free;
 end;
 
@@ -182,6 +200,7 @@ procedure TFrmMain.FormCreate(Sender: TObject);
 begin
   ZapMQWrapper := TZapMQWrapper.Create('localhost', 5679);
   ZapMQWrapper.OnRPCExpired := RPCExpired;
+  BenchMark := TBenchMark.Create('localhost', 5679);
   Memo1.Lines.Add('*** ZapMQ Wrapper Started ***');
 end;
 
@@ -205,10 +224,12 @@ end;
 function TFrmMain.ZapMQHandlerBenchMark(pMessage: TZapJSONMessage;
   var pProcessing: boolean): TJSONObject;
 begin
+  Memo1.Lines.Add('*** Processing Message '+FormatDateTime('hh:mm:ss.zzz', now)+' ***');
+  Memo1.Lines.Add(pMessage.Body.ToString);
+  Memo1.Lines.Add('*** Message Processed ***');
+  pProcessing := False;
   Result := TJSONObject.Create;
   Result.AddPair('RPC message', 'Answer');
-  //Sleep(StrToInt(Edit3.Text));
-  pProcessing := False;
 end;
 
 function TFrmMain.ZapMQHandlerNewPublish(pMessage: TZapJSONMessage;

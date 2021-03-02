@@ -16,6 +16,7 @@ type
     FCycle: integer;
     FConnectLatency: Cardinal;
     FCreated: TDateTime;
+    FChecked: boolean;
     procedure SetExpired(const Value: Boolean);
     procedure SetLatency(const Value: Cardinal);
     procedure SetArrived(const Value: TDateTime);
@@ -24,6 +25,7 @@ type
     procedure SetSended(const Value: TDateTime);
     procedure SetConnectLatency(const Value: Cardinal);
     procedure SetCreated(const Value: TDateTime);
+    procedure SetChecked(const Value: boolean);
   public
     property ConnectLatency : Cardinal read FConnectLatency write SetConnectLatency;
     property Latency : Cardinal read FLatency write SetLatency;
@@ -33,6 +35,7 @@ type
     property Created : TDateTime read FCreated write SetCreated;
     property Sended : TDateTime read FSended write SetSended;
     property Arrived : TDateTime read FArrived write SetArrived;
+    property Checked : boolean read FChecked write SetChecked;
   end;
 
   TBenchMarkResults = class
@@ -88,6 +91,11 @@ end;
 procedure TBenchMarkResult.SetArrived(const Value: TDateTime);
 begin
   FArrived := Value;
+end;
+
+procedure TBenchMarkResult.SetChecked(const Value: boolean);
+begin
+  FChecked := Value;
 end;
 
 procedure TBenchMarkResult.SetConnectLatency(const Value: Cardinal);

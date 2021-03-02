@@ -4,7 +4,7 @@ interface
 
 uses
   System.Classes, ZapMQ.Core, ZapMQ.handler, ZapMQ.Message.JSON, SyncObjs,
-  Generics.Collections, ZapMQ.Message.RPC;
+  Generics.Collections, ZapMQ.Message.RPC, ZapMQ.Queue;
 
 type
   TEventRPCExpired = procedure(const pMessage : TZapJSONMessage) of object;
@@ -13,10 +13,13 @@ type
   private
     FEvent : TEvent;
     FCore : TZapMQ;
+    FPriority : TZapMQQueuePriority;
+    FWaitTime : Cardinal;
   public
+    property QueuePriority : TZapMQQueuePriority read FPriority;
     procedure Execute; override;
     procedure Stop;
-    constructor Create(const pCore : TZapMQ); overload;
+    constructor Create(const pCore : TZapMQ; const pPriority : TZapMQQueuePriority); overload;
     destructor Destroy; override;
   end;
 
@@ -28,6 +31,7 @@ type
     FRPCMessages : TObjectList<TZapRPCMessage>;
     procedure SetEventRPCExpired(const Value: TEventRPCExpired);
   public
+    property SyncEvent : TEvent read FEvent write FEvent;
     property EventRPCExpired : TEventRPCExpired read FEventRPCExpired write SetEventRPCExpired;
     procedure Execute; override;
     procedure Stop;
@@ -36,18 +40,32 @@ type
     destructor Destroy; override;
   end;
 
+  const
+    LOW_PRIORITY = 1000;
+    MEDIUM_LOW_PRIORITY = 750;
+    MEDIUM_PRIORITY = 500;
+    MEDIUM_HIGH_PRIORITY = 100;
+    HIGH_PRIORITY = 10;
+
 implementation
 
 uses
-  ZapMQ.Queue, JSON, System.SysUtils, System.Threading;
+  JSON, System.SysUtils, System.Threading;
 
 { TZapMQThread }
 
-constructor TZapMQThread.Create(const pCore : TZapMQ);
+constructor TZapMQThread.Create(const pCore : TZapMQ; const pPriority : TZapMQQueuePriority);
 begin
   inherited Create(True);
-  FreeOnTerminate := True;
   FCore := pCore;
+  FPriority := pPriority;
+  case FPriority of
+    mqpHigh: FWaitTime := HIGH_PRIORITY;
+    mqpMediumHigh: FWaitTime := MEDIUM_HIGH_PRIORITY;
+    mqpMedium: FWaitTime := MEDIUM_PRIORITY;
+    mqpMediumLow: FWaitTime := MEDIUM_LOW_PRIORITY;
+    mqpLow: FWaitTime := LOW_PRIORITY;
+  end;
   FEvent := TEvent.Create(nil, True, False, '');
 end;
 
@@ -72,34 +90,38 @@ begin
         JSONMessage : TZapJSONMessage;
         RPCAnswer : TJSONObject;
       begin
-        JSONMessage := FCore.GetMessage(FCore.Queues[Index].Name);
-        if Assigned(JSONMessage) then
+        if FCore.Queues[Index].Priority = FPriority then
         begin
-          try
-            RPCAnswer := FCore.Queues[Index].Handler(JSONMessage, ProcessingMessage);
-            if Assigned(RPCAnswer) and (JSONMessage.RPC) then
+          JSONMessage := FCore.GetMessage(FCore.Queues[Index].Name);
+          if Assigned(JSONMessage) then
+          begin
+            TThread.Synchronize(TThread.Current, procedure
             begin
               try
-                FCore.SendRPCResponse(FCore.Queues[Index].Name, JSONMessage.Id, RPCAnswer.ToString);
+                RPCAnswer := FCore.Queues[Index].Handler(JSONMessage, ProcessingMessage);
+                if Assigned(RPCAnswer) and (JSONMessage.RPC) then
+                begin
+                  try
+                    FCore.SendRPCResponse(FCore.Queues[Index].Name, JSONMessage.Id, RPCAnswer.ToString);
+                  finally
+                    RPCAnswer.Free;
+                  end;
+                end;
               finally
-                RPCAnswer.Free;
+                JSONMessage.Free;
               end;
-            end;
-          finally
-            JSONMessage.Free;
+            end);
           end;
         end;
       end);
     end;
-    if not (FEvent.WaitFor(10) = wrTimeout) then
-    begin
-      Terminate;
-    end;
+    FEvent.WaitFor(FWaitTime);
   end;
 end;
 
 procedure TZapMQThread.Stop;
 begin
+  Terminate;
   FEvent.SetEvent;
   while not Terminated do ;
 end;
@@ -141,12 +163,15 @@ begin
       begin
         RPCAnswer := TJSONObject.ParseJSONValue(
           TEncoding.ASCII.GetBytes(Response), 0) as TJSONObject;
-        try
-          ZapMessage.Handler(RPCAnswer);
-          FRPCMessages.Remove(ZapMessage);
-        finally
-          RPCAnswer.Free;
-        end;
+        Synchronize(TThread.Current, procedure
+        begin
+          try
+            ZapMessage.Handler(RPCAnswer);
+            FRPCMessages.Remove(ZapMessage);
+          finally
+            RPCAnswer.Free;
+          end;
+        end);
       end
       else
       begin
@@ -154,16 +179,17 @@ begin
         begin
           if Assigned(FEventRPCExpired) then
           begin
-            FEventRPCExpired(ZapMessage.JSONMessage);
+            Synchronize(TThread.Current, procedure
+            begin
+              FEventRPCExpired(ZapMessage.JSONMessage);
+              FRPCMessages.Remove(ZapMessage);
+            end);
           end;
-          FRPCMessages.Remove(ZapMessage);
         end;
       end;
     end;
-    if not (FEvent.WaitFor(100) = wrTimeout) then
-    begin
-      Terminate;
-    end;
+    if FRPCMessages.Count = 0 then FEvent.ResetEvent;
+    FEvent.WaitFor(INFINITE);
   end;
 end;
 
@@ -174,8 +200,8 @@ end;
 
 procedure TZapMQRPCThread.Stop;
 begin
-  if Assigned(FEvent) then
-    FEvent.SetEvent;
+  Terminate;
+  FEvent.SetEvent;
   while not Terminated do ;
 end;
 

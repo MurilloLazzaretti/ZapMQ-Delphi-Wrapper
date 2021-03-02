@@ -4,24 +4,27 @@ interface
 
 uses
   ZapMQ.Core, ZapMQ.Thread, ZapMQ.Handler, JSON, Generics.Collections,
-  System.Classes, ZapMQ.Message.RPC;
+  System.Classes, ZapMQ.Message.RPC, ZapMQ.Queue;
 
 type
   TZapMQWrapper = class
   private
     FCore : TZapMQ;
-    FThread : TZapMQThread;
+    FListThreads : TObjectList<TZapMQThread>;
     FRPCThread : TZapMQRPCThread;
     FRPCMessages : TObjectList<TZapRPCMessage>;
     FOnRPCExpired: TEventRPCExpired;
     procedure SetOnRPCExpired(const Value: TEventRPCExpired);
+    procedure CheckPriorityThreadAndCreate(const pPriority : TZapMQQueuePriority);
+    procedure CheckPriorityThreadAndFree(const pPriority : TZapMQQueuePriority);
   public
     property OnRPCExpired : TEventRPCExpired read FOnRPCExpired write SetOnRPCExpired;
     function SendMessage(const pQueueName : string; const pMessage : TJSONObject;
       const pTTL : Word = 0) : boolean;
     function SendRPCMessage(const pQueueName : string; const pMessage : TJSONObject;
       const pHandler : TZapMQHandlerRPC; const pTTL : Word = 0) : boolean;
-    procedure Bind(const pQueueName : string; const pHandler : TZapMQHanlder);
+    procedure Bind(const pQueueName : string; const pHandler : TZapMQHanlder;
+      const pPriority : TZapMQQueuePriority = mqpMedium);
     procedure UnBind(const pQueueName : string);
     function IsBinded(const pQueueName : string) : boolean;
     constructor Create(const pHost : string; const pPort : integer); overload;
@@ -31,40 +34,105 @@ type
 implementation
 
 uses
-  ZapMQ.Queue, ZapMQ.Message.JSON, System.SysUtils;
+  ZapMQ.Message.JSON, System.SysUtils;
 
 { TZapMQWrapper }
 
 procedure TZapMQWrapper.Bind(const pQueueName: string;
-  const pHandler: TZapMQHanlder);
+  const pHandler: TZapMQHanlder; const pPriority : TZapMQQueuePriority = mqpMedium);
 var
   Queue : TZapMQQueue;
 begin
   if pQueueName <> string.Empty then
   begin
-    Queue := TZapMQQueue.Create;
-    Queue.Name := pQueueName;
-    Queue.Handler := pHandler;
-    FCore.Queues.Add(Queue);
+    if not IsBinded(pQueueName) then
+    begin
+      Queue := TZapMQQueue.Create;
+      Queue.Name := pQueueName;
+      Queue.Handler := pHandler;
+      Queue.Priority := pPriority;
+      FCore.Queues.Add(Queue);
+      CheckPriorityThreadAndCreate(pPriority);
+    end;
   end
   else
     raise Exception.Create('You cannot bind an unnamed Queue');
+end;
+
+procedure TZapMQWrapper.CheckPriorityThreadAndCreate(
+  const pPriority: TZapMQQueuePriority);
+var
+  ThreadAlreadyRunnig : boolean;
+  Thread: TZapMQThread;
+  NewThread : TZapMQThread;
+begin
+  ThreadAlreadyRunnig := False;
+  for Thread in FListThreads do
+  begin
+    if Thread.QueuePriority = pPriority then
+    begin
+      ThreadAlreadyRunnig := True;
+      Break;
+    end;
+  end;
+  if not ThreadAlreadyRunnig then
+  begin
+    NewThread := TZapMQThread.Create(FCore, pPriority);
+    FListThreads.Add(NewThread);
+    NewThread.Start;
+  end;
+end;
+
+procedure TZapMQWrapper.CheckPriorityThreadAndFree(
+  const pPriority: TZapMQQueuePriority);
+var
+  Queue: TZapMQQueue;
+  ThreadStilRunnig : boolean;
+  Thread: TZapMQThread;
+begin
+  ThreadStilRunnig := False;
+  for Queue in FCore.Queues do
+  begin
+    if Queue.Priority = pPriority then
+    begin
+      ThreadStilRunnig := True;
+      Break;
+    end;
+  end;
+  if not ThreadStilRunnig then
+  begin
+    for Thread in FListThreads do
+    begin
+      if Thread.QueuePriority = pPriority then
+      begin
+        Thread.Stop;
+        FListThreads.Remove(Thread);
+        Break;
+      end;
+    end;
+  end;
 end;
 
 constructor TZapMQWrapper.Create(const pHost: string; const pPort: integer);
 begin
   FCore := TZapMQ.Create(pHost, pPort);
   FRPCMessages := TObjectList<TZapRPCMessage>.Create(True);
-  FThread := TZapMQThread.Create(FCore);
-  FThread.Start;
+  FListThreads := TObjectList<TZapMQThread>.Create(True);
   FRPCThread := TZapMQRPCThread.Create(pHost, pPort, FRPCMessages);
   FRPCThread.Start;
 end;
 
 destructor TZapMQWrapper.Destroy;
+var
+  Thread: TZapMQThread;
 begin
   FRPCThread.Stop;
-  FThread.Stop;
+  for Thread in FListThreads do
+  begin
+    Thread.Stop;
+  end;
+  FListThreads.Clear;
+  FListThreads.Free;
   FRPCMessages.Free;
   FCore.Free;
   inherited;
@@ -136,6 +204,7 @@ begin
         FRPCThread.EventRPCExpired := FOnRPCExpired;
         ZapRPCMessage := TZapRPCMessage.Create(JSONMessage, pHandler, pQueueName);
         FRPCMessages.Add(ZapRPCMessage);
+        FRPCThread.SyncEvent.SetEvent;
         Result := True;
       end
       else
@@ -163,7 +232,10 @@ var
 begin
   Queue := FCore.FindQueue(pQueueName);
   if Assigned(Queue) then
+  begin
     FCore.Queues.Remove(Queue);
+    CheckPriorityThreadAndFree(Queue.Priority);
+  end;
 end;
 
 end.
