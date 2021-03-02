@@ -127,6 +127,7 @@ var
   Thread: TZapMQThread;
 begin
   FRPCThread.Stop;
+  FRPCThread.Free;
   for Thread in FListThreads do
   begin
     Thread.Stop;

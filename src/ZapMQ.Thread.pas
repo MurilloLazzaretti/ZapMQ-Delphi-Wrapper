@@ -128,7 +128,6 @@ constructor TZapMQRPCThread.Create(const pHost: string; const pPort : Word;
   const pRPCMessages : TObjectList<TZapRPCMessage>);
 begin
   inherited Create(True);
-  FreeOnTerminate := True;
   FCore := TZapMQ.Create(pHost, pPort);
   FEvent := TEvent.Create(nil, True, False, '');
   FRPCMessages := pRPCMessages;
