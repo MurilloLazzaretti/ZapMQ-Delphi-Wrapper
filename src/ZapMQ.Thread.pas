@@ -78,42 +78,38 @@ end;
 procedure TZapMQThread.Execute;
 var
   ProcessingMessage : boolean;
+  Queue : TZapMQQueue;
+  JSONMessage : TZapJSONMessage;
+  RPCAnswer : TJSONObject;
 begin
   inherited;
   while not Terminated do
   begin
-    if not ProcessingMessage then
+    for Queue in FCore.Queues do
     begin
-      TParallel.&For(0, Pred(FCore.Queues.Count),
-      procedure(Index: Integer)
-      var
-        JSONMessage : TZapJSONMessage;
-        RPCAnswer : TJSONObject;
+      if Queue.Priority = FPriority then
       begin
-        if FCore.Queues[Index].Priority = FPriority then
+        JSONMessage := FCore.GetMessage(Queue.Name);
+        if Assigned(JSONMessage) then
         begin
-          JSONMessage := FCore.GetMessage(FCore.Queues[Index].Name);
-          if Assigned(JSONMessage) then
+          TThread.Synchronize(TThread.Current, procedure
           begin
-            TThread.Synchronize(TThread.Current, procedure
-            begin
-              try
-                RPCAnswer := FCore.Queues[Index].Handler(JSONMessage, ProcessingMessage);
-                if Assigned(RPCAnswer) and (JSONMessage.RPC) then
-                begin
-                  try
-                    FCore.SendRPCResponse(FCore.Queues[Index].Name, JSONMessage.Id, RPCAnswer.ToString);
-                  finally
-                    RPCAnswer.Free;
-                  end;
+            try
+              RPCAnswer := Queue.Handler(JSONMessage, ProcessingMessage);
+              if Assigned(RPCAnswer) and (JSONMessage.RPC) then
+              begin
+                try
+                  FCore.SendRPCResponse(Queue.Name, JSONMessage.Id, RPCAnswer.ToString);
+                finally
+                  RPCAnswer.Free;
                 end;
-              finally
-                JSONMessage.Free;
               end;
-            end);
-          end;
+            finally
+              JSONMessage.Free;
+            end;
+          end);
         end;
-      end);
+      end
     end;
     FEvent.WaitFor(FWaitTime);
   end;
