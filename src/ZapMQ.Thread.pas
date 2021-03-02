@@ -87,14 +87,15 @@ begin
   begin
     for Queue in FCore.Queues do
     begin
-      if Queue.Priority = FPriority then
+      if not ProcessingMessage then
       begin
-        JSONMessage := FCore.GetMessage(Queue.Name);
-        if Assigned(JSONMessage) then
+        if Queue.Priority = FPriority then
         begin
-          TThread.Synchronize(TThread.Current, procedure
+          JSONMessage := FCore.GetMessage(Queue.Name);
+          if Assigned(JSONMessage) then
           begin
             try
+              ProcessingMessage := True;
               RPCAnswer := Queue.Handler(JSONMessage, ProcessingMessage);
               if Assigned(RPCAnswer) and (JSONMessage.RPC) then
               begin
@@ -107,9 +108,9 @@ begin
             finally
               JSONMessage.Free;
             end;
-          end);
-        end;
-      end
+          end;
+        end
+      end;
     end;
     FEvent.WaitFor(FWaitTime);
   end;
@@ -158,15 +159,12 @@ begin
       begin
         RPCAnswer := TJSONObject.ParseJSONValue(
           TEncoding.ASCII.GetBytes(Response), 0) as TJSONObject;
-        Synchronize(TThread.Current, procedure
-        begin
-          try
-            ZapMessage.Handler(RPCAnswer);
-            FRPCMessages.Remove(ZapMessage);
-          finally
-            RPCAnswer.Free;
-          end;
-        end);
+        try
+          ZapMessage.Handler(RPCAnswer);
+          FRPCMessages.Remove(ZapMessage);
+        finally
+          RPCAnswer.Free;
+        end;
       end
       else
       begin
@@ -174,11 +172,8 @@ begin
         begin
           if Assigned(FEventRPCExpired) then
           begin
-            Synchronize(TThread.Current, procedure
-            begin
-              FEventRPCExpired(ZapMessage.JSONMessage);
-              FRPCMessages.Remove(ZapMessage);
-            end);
+            FEventRPCExpired(ZapMessage.JSONMessage);
+            FRPCMessages.Remove(ZapMessage);
           end;
         end;
       end;

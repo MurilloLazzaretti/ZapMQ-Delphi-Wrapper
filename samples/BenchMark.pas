@@ -52,8 +52,8 @@ var
   Resultb : TBenchMarkResult;
   Body : TJSONObject;
 begin
-  TThread.Queue(TThread.Current, procedure
-  begin
+//  TThread.Queue(TThread.Current, procedure
+//  begin
     Body := pMessage.GetValue<TJSONObject>('Body');
     Cycle := Body.GetValue<integer>('Cycle');
     Queue := Body.GetValue<integer>('Queue');
@@ -65,7 +65,7 @@ begin
       Resultb.Latency := MilliSecondsBetween(Resultb.Arrived, Resultb.Sended);
       Resultb.Checked := True;
     end;
-  end);
+//  end);
 end;
 
 constructor TBenchMark.Create(const pHost : string; const pPort : integer);
