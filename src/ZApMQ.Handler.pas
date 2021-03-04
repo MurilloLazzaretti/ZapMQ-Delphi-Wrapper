@@ -8,7 +8,8 @@ uses
 type
   TZapMQHanlder = reference to function(pMessage : TZapJSONMessage;
     var pProcessing : boolean) : TJSONObject;
-  TZapMQHandlerRPC = reference to procedure(pMessage : TJSONObject);
+  TZapMQHandlerRPC = reference to procedure(pMessage : TJSONObject;
+    var pProcessing : boolean);
 
 implementation
 

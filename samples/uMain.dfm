@@ -24,7 +24,6 @@ object FrmMain: TFrmMain
     Align = alTop
     Caption = 'Queues'
     TabOrder = 0
-    ExplicitWidth = 722
     object Label5: TLabel
       Left = 5
       Top = 17
@@ -76,8 +75,6 @@ object FrmMain: TFrmMain
       Enabled = False
       ItemHeight = 13
       TabOrder = 4
-      ExplicitLeft = 352
-      ExplicitHeight = 103
     end
     object Button7: TButton
       Left = 5
@@ -155,8 +152,6 @@ object FrmMain: TFrmMain
     Align = alBottom
     Caption = 'Process'
     TabOrder = 2
-    ExplicitTop = 278
-    ExplicitWidth = 514
     object Label1: TLabel
       Left = 354
       Top = 28
@@ -181,7 +176,6 @@ object FrmMain: TFrmMain
       Height = 221
       Align = alBottom
       TabOrder = 1
-      ExplicitWidth = 504
     end
     object Edit3: TEdit
       Left = 433
@@ -201,8 +195,6 @@ object FrmMain: TFrmMain
     Align = alTop
     Caption = 'BenchMark'
     TabOrder = 3
-    ExplicitTop = 319
-    ExplicitWidth = 722
     object Label2: TLabel
       Left = 131
       Top = 64
@@ -287,8 +279,6 @@ object FrmMain: TFrmMain
         'Medium High'
         'High')
       TabOrder = 6
-      ExplicitLeft = 394
-      ExplicitTop = 17
     end
     object Edit7: TEdit
       Left = 194

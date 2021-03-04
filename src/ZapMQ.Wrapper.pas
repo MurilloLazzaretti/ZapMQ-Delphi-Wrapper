@@ -17,8 +17,11 @@ type
     procedure SetOnRPCExpired(const Value: TEventRPCExpired);
     procedure CheckPriorityThreadAndCreate(const pPriority : TZapMQQueuePriority);
     procedure CheckPriorityThreadAndFree(const pPriority : TZapMQQueuePriority);
+    function GetIsProcessing: boolean;
   public
+    property IsProcessing : boolean read GetIsProcessing;
     property OnRPCExpired : TEventRPCExpired read FOnRPCExpired write SetOnRPCExpired;
+    procedure SafeStop;
     function SendMessage(const pQueueName : string; const pMessage : TJSONObject;
       const pTTL : Word = 0) : boolean;
     function SendRPCMessage(const pQueueName : string; const pMessage : TJSONObject;
@@ -34,7 +37,7 @@ type
 implementation
 
 uses
-  ZapMQ.Message.JSON, System.SysUtils;
+  ZapMQ.Message.JSON, System.SysUtils, Vcl.Forms;
 
 { TZapMQWrapper }
 
@@ -139,6 +142,23 @@ begin
   inherited;
 end;
 
+function TZapMQWrapper.GetIsProcessing: boolean;
+var
+  Thread: TZapMQThread;
+  ThreadRunnig : boolean;
+begin
+  ThreadRunnig := False;
+  for Thread in FListThreads do
+  begin
+    if Thread.IsProcessing then
+    begin
+      ThreadRunnig := True;
+      Break;
+    end;
+  end;
+  Result := ThreadRunnig or FRPCThread.IsProcessing;
+end;
+
 function TZapMQWrapper.IsBinded(const pQueueName: string): boolean;
 var
   Queue : TZapMQQueue;
@@ -151,6 +171,21 @@ begin
       Result := True;
       Break;
     end;
+  end;
+end;
+
+procedure TZapMQWrapper.SafeStop;
+var
+  Thread: TZapMQThread;
+begin
+  for Thread in FListThreads do
+  begin
+    Thread.SafeStop := True;
+  end;
+  FRPCThread.SafeStop := True;
+  while IsProcessing do
+  begin
+    Application.ProcessMessages;
   end;
 end;
 

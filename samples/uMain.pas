@@ -62,7 +62,7 @@ type
       var pProcessing : boolean) : TJSONObject;
     function ZapMQHandlerNewPublish(pMessage : TZapJSONMessage;
       var pProcessing : boolean) : TJSONObject;
-    procedure ZapMQHandlerRPC(pMessage : TJSONObject);
+    procedure ZapMQHandlerRPC(pMessage : TJSONObject; var pProcessing : boolean);
     procedure RPCExpired(const pMessage : TZapJSONMessage);
   public
     BenchMark : TBenchMark;
@@ -193,6 +193,7 @@ procedure TFrmMain.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   BenchMark.Stop;
   BenchMark.Free;
+  ZapMQWrapper.SafeStop;
   ZapMQWrapper.Free;
 end;
 
@@ -272,10 +273,12 @@ begin
     Result := nil;
 end;
 
-procedure TFrmMain.ZapMQHandlerRPC(pMessage: TJSONObject);
+procedure TFrmMain.ZapMQHandlerRPC(pMessage: TJSONObject; var pProcessing : boolean);
 begin
   Memo1.Lines.Add('*** RPC Answer '+FormatDateTime('hh:mm:ss.zzz', now)+' ***');
+  Sleep(StrToInt(Edit3.Text));
   Memo1.Lines.Add(pMessage.ToString);
+  pProcessing := False;
 end;
 
 end.

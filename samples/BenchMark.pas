@@ -18,7 +18,7 @@ type
     FQueues: integer;
     FTTL: Cardinal;
     procedure BenchMarkExpired(const pMessage : TZapJSONMessage);
-    procedure BenchMarkHandlerRPC(pMessage: TJSONObject);
+    procedure BenchMarkHandlerRPC(pMessage: TJSONObject; var pProcessing : boolean);
     procedure Print;
     function GetTotalMessagesExpired : integer;
     function GetTotalMessagesRecived : integer;
@@ -46,26 +46,24 @@ uses
 
 { TBenchMark }
 
-procedure TBenchMark.BenchMarkHandlerRPC(pMessage: TJSONObject);
+procedure TBenchMark.BenchMarkHandlerRPC(pMessage: TJSONObject; var pProcessing : boolean);
 var
   Cycle, Queue : integer;
   Resultb : TBenchMarkResult;
   Body : TJSONObject;
 begin
-//  TThread.Queue(TThread.Current, procedure
-//  begin
-    Body := pMessage.GetValue<TJSONObject>('Body');
-    Cycle := Body.GetValue<integer>('Cycle');
-    Queue := Body.GetValue<integer>('Queue');
-    Resultb := FBenchMark.FindResult(Cycle, Queue);
-    if Assigned(Resultb) then
-    begin
-      Resultb.Expired := False;
-      Resultb.Arrived := Now;
-      Resultb.Latency := MilliSecondsBetween(Resultb.Arrived, Resultb.Sended);
-      Resultb.Checked := True;
-    end;
-//  end);
+  Body := pMessage.GetValue<TJSONObject>('Body');
+  Cycle := Body.GetValue<integer>('Cycle');
+  Queue := Body.GetValue<integer>('Queue');
+  Resultb := FBenchMark.FindResult(Cycle, Queue);
+  if Assigned(Resultb) then
+  begin
+    Resultb.Expired := False;
+    Resultb.Arrived := Now;
+    Resultb.Latency := MilliSecondsBetween(Resultb.Arrived, Resultb.Sended);
+    Resultb.Checked := True;
+  end;
+  pProcessing := False;
 end;
 
 constructor TBenchMark.Create(const pHost : string; const pPort : integer);
