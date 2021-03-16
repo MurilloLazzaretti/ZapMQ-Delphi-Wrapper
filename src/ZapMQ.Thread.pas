@@ -56,8 +56,8 @@ type
     LOW_PRIORITY = 1000;
     MEDIUM_LOW_PRIORITY = 750;
     MEDIUM_PRIORITY = 500;
-    MEDIUM_HIGH_PRIORITY = 100;
-    HIGH_PRIORITY = 10;
+    MEDIUM_HIGH_PRIORITY = 250;
+    HIGH_PRIORITY = 100;
 
 implementation
 
@@ -203,6 +203,7 @@ begin
         end;
       end;
     end;
+    Sleep(100);
     if FRPCMessages.Count = 0 then FEvent.ResetEvent;
     FEvent.WaitFor(INFINITE);
   end;

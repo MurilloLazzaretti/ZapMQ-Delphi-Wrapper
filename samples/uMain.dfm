@@ -2,8 +2,8 @@ object FrmMain: TFrmMain
   Left = 0
   Top = 0
   Caption = 'ZapMQ - Wrapper'
-  ClientHeight = 738
-  ClientWidth = 533
+  ClientHeight = 830
+  ClientWidth = 682
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -19,11 +19,12 @@ object FrmMain: TFrmMain
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 527
+    Width = 676
     Height = 163
     Align = alTop
     Caption = 'Queues'
     TabOrder = 0
+    ExplicitWidth = 527
     object Label5: TLabel
       Left = 5
       Top = 17
@@ -67,7 +68,7 @@ object FrmMain: TFrmMain
     end
     object ListBox1: TListBox
       AlignWithMargins = True
-      Left = 365
+      Left = 514
       Top = 18
       Width = 157
       Height = 140
@@ -75,6 +76,7 @@ object FrmMain: TFrmMain
       Enabled = False
       ItemHeight = 13
       TabOrder = 4
+      ExplicitLeft = 365
     end
     object Button7: TButton
       Left = 5
@@ -90,8 +92,8 @@ object FrmMain: TFrmMain
     AlignWithMargins = True
     Left = 3
     Top = 172
-    Width = 527
-    Height = 101
+    Width = 676
+    Height = 194
     Align = alTop
     Caption = 'Messages'
     TabOrder = 1
@@ -108,6 +110,13 @@ object FrmMain: TFrmMain
       Width = 69
       Height = 13
       Caption = 'Queue Name :'
+    end
+    object Label8: TLabel
+      Left = 321
+      Top = 18
+      Width = 49
+      Height = 13
+      Caption = 'Message :'
     end
     object Button2: TButton
       Left = 5
@@ -142,16 +151,25 @@ object FrmMain: TFrmMain
       TabOrder = 3
       Text = '0'
     end
+    object Memo2: TMemo
+      Left = 376
+      Top = 18
+      Width = 289
+      Height = 164
+      TabOrder = 4
+    end
   end
   object GroupBox3: TGroupBox
     AlignWithMargins = True
     Left = 3
-    Top = 456
-    Width = 527
+    Top = 548
+    Width = 676
     Height = 279
     Align = alBottom
     Caption = 'Process'
     TabOrder = 2
+    ExplicitTop = 456
+    ExplicitWidth = 527
     object Label1: TLabel
       Left = 354
       Top = 28
@@ -172,10 +190,11 @@ object FrmMain: TFrmMain
       AlignWithMargins = True
       Left = 5
       Top = 53
-      Width = 517
+      Width = 666
       Height = 221
       Align = alBottom
       TabOrder = 1
+      ExplicitWidth = 517
     end
     object Edit3: TEdit
       Left = 433
@@ -189,12 +208,13 @@ object FrmMain: TFrmMain
   object GroupBox4: TGroupBox
     AlignWithMargins = True
     Left = 3
-    Top = 279
-    Width = 527
-    Height = 177
+    Top = 372
+    Width = 676
+    Height = 173
     Align = alTop
     Caption = 'BenchMark'
     TabOrder = 3
+    ExplicitTop = 365
     object Label2: TLabel
       Left = 131
       Top = 64
@@ -265,10 +285,10 @@ object FrmMain: TFrmMain
     end
     object RadioGroup1: TRadioGroup
       AlignWithMargins = True
-      Left = 392
+      Left = 541
       Top = 18
       Width = 130
-      Height = 154
+      Height = 150
       Align = alRight
       Caption = 'Priority'
       ItemIndex = 2
@@ -279,6 +299,8 @@ object FrmMain: TFrmMain
         'Medium High'
         'High')
       TabOrder = 6
+      ExplicitLeft = 392
+      ExplicitHeight = 154
     end
     object Edit7: TEdit
       Left = 194
