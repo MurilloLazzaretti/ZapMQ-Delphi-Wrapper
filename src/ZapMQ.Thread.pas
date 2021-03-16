@@ -124,6 +124,7 @@ begin
         end
       end;
     end;
+    FEvent.ResetEvent;
     FEvent.WaitFor(FWaitTime);
   end;
 end;
@@ -203,8 +204,7 @@ begin
         end;
       end;
     end;
-    Sleep(100);
-    if FRPCMessages.Count = 0 then FEvent.ResetEvent;
+    if FRPCMessages.Count = 0 then FEvent.ResetEvent else Sleep(50);
     FEvent.WaitFor(INFINITE);
   end;
 end;
