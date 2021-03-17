@@ -7,6 +7,8 @@ uses
   System.Classes, ZapMQ.Message.RPC, ZapMQ.Queue;
 
 type
+  TZapMQOccurrenceType = (otInformation, otException, otError);
+
   TZapMQWrapper = class
   private
     FCore : TZapMQ;
@@ -30,6 +32,8 @@ type
       const pPriority : TZapMQQueuePriority = mqpMedium);
     procedure UnBind(const pQueueName : string);
     function IsBinded(const pQueueName : string) : boolean;
+    procedure Log(const pOccurrenceType : TZapMQOccurrenceType;
+      const pOccurrenceOrigin, pTitle, pText : string);
     constructor Create(const pHost : string; const pPort : integer); overload;
     destructor Destroy; override;
   end;
@@ -37,7 +41,7 @@ type
 implementation
 
 uses
-  ZapMQ.Message.JSON, System.SysUtils, Vcl.Forms;
+  ZapMQ.Message.JSON, System.SysUtils, Vcl.Forms, TypInfo;
 
 { TZapMQWrapper }
 
@@ -174,6 +178,26 @@ begin
   end;
 end;
 
+procedure TZapMQWrapper.Log(const pOccurrenceType: TZapMQOccurrenceType;
+  const pOccurrenceOrigin, pTitle, pText: string);
+var
+  JsonObject : TJSONObject;
+begin
+  JsonObject := TJSONObject.Create;
+  try
+    JsonObject.AddPair('OccurrenceDate', TJSONString.Create(DateTimeToStr(Now)));
+    JsonObject.AddPair('OccurrenceOrigin', TJSONString.Create(pOccurrenceOrigin));
+    JsonObject.AddPair('ApplicationName', TJSONString.Create(ExtractFileName(Application.ExeName)));
+    JsonObject.AddPair('Title', TJSONString.Create(pTitle));
+    JsonObject.AddPair('Text', TJSONString.Create(pText));
+    JsonObject.AddPair('OccurrenceType', TJSONString.Create(
+      GetEnumName(TypeInfo(TZapMQOccurrenceType), integer(pOccurrenceType))));
+    SendMessage('LogsFactory', JsonObject);
+  finally
+    JsonObject.Free;
+  end;
+end;
+
 procedure TZapMQWrapper.SafeStop;
 var
   Thread: TZapMQThread;
@@ -183,6 +207,7 @@ begin
     Thread.SafeStop := True;
   end;
   FRPCThread.SafeStop := True;
+  Sleep(150);
   while IsProcessing do
   begin
     Application.ProcessMessages;
