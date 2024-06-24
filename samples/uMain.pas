@@ -42,6 +42,12 @@ type
     Label7: TLabel;
     Edit7: TEdit;
     Button11: TButton;
+    Memo2: TMemo;
+    Label8: TLabel;
+    Button12: TButton;
+    Edit8: TEdit;
+    Label9: TLabel;
+    TimerKeepAlive: TTimer;
     procedure Button2Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure Button1Click(Sender: TObject);
@@ -55,6 +61,8 @@ type
     procedure Button9Click(Sender: TObject);
     procedure Button10Click(Sender: TObject);
     procedure Button11Click(Sender: TObject);
+    procedure Button12Click(Sender: TObject);
+    procedure TimerKeepAliveTimer(Sender: TObject);
   private
     function ZapMQHandler(pMessage : TZapJSONMessage;
       var pProcessing : boolean) : TJSONObject;
@@ -70,6 +78,8 @@ type
     BenchMark : TBenchMark;
     ZapMQWrapper : TZapMQWrapper;
   end;
+
+
 
 var
   FrmMain: TFrmMain;
@@ -98,6 +108,21 @@ begin
   Memo1.Lines.Add('*** Log Sended ***');
 end;
 
+procedure TFrmMain.Button12Click(Sender: TObject);
+begin
+  if (Button12.Caption = 'Monitoring') then
+  begin
+    Button12.Caption := 'Stop';
+    TimerKeepAlive.Interval := StrToInt(Edit8.Text);
+    TimerKeepAlive.Enabled := true;
+  end
+  else
+  begin
+    Button12.Caption := 'Monitoring';
+    TimerKeepAlive.Enabled := false;
+  end;
+end;
+
 procedure TFrmMain.Button1Click(Sender: TObject);
 begin
   ZapMQWrapper.Bind(Edit1.Text, ZapMQHandler);
@@ -107,12 +132,11 @@ end;
 
 procedure TFrmMain.Button2Click(Sender: TObject);
 var
-  JSON : TJSONObject;
+  JSON : TJSONValue;
 begin
-  JSON := TJSONObject.Create;
+  JSON := TJSONObject.ParseJSONValue(Memo2.Lines.Text);
   try
-    JSON.AddPair('message', 'publish');
-    if ZapMQWrapper.SendMessage(Edit2.Text, JSON, StrToInt(Edit4.Text)) then
+    if ZapMQWrapper.SendMessage(Edit2.Text, TJSONObject(JSON), StrToInt(Edit4.Text)) then
       Memo1.Lines.Add('*** Message Sended ***')
     else
       Memo1.Lines.Add('*** Error to Send Message ***');
@@ -135,12 +159,11 @@ end;
 
 procedure TFrmMain.Button5Click(Sender: TObject);
 var
-  JSON : TJSONObject;
+  JSON : TJSONValue;
 begin
-  JSON := TJSONObject.Create;
+  JSON := TJSONObject.ParseJSONValue(Memo2.Lines.Text);
   try
-    JSON.AddPair('message', 'RPC');
-    if ZapMQWrapper.SendRPCMessage(Edit2.Text, JSON, ZapMQHandlerRPC, StrToInt(Edit4.Text)) then
+    if ZapMQWrapper.SendRPCMessage(Edit2.Text, TJSONObject(JSON), ZapMQHandlerRPC, StrToInt(Edit4.Text)) then
       Memo1.Lines.Add('*** RPC Message Sended '+ FormatDateTime('hh:mm:ss.zzz', now)+' ***')
     else
       Memo1.Lines.Add('*** Error to Send RPC Message ***');
@@ -217,6 +240,21 @@ procedure TFrmMain.RPCExpired(const pMessage: TZapJSONMessage);
 begin
   Memo1.Lines.Add('*** RPC Message Expired ***');
   Memo1.Lines.Add('Id:' + pMessage.Id);
+end;
+
+procedure TFrmMain.TimerKeepAliveTimer(Sender: TObject);
+var
+  JSON : TJSONValue;
+begin
+  JSON := TJSONObject.ParseJSONValue(Memo2.Lines.Text);
+  try
+    if ZapMQWrapper.SendRPCMessage(Edit2.Text, TJSONObject(JSON), ZapMQHandlerRPC, StrToInt(Edit4.Text)) then
+      Memo1.Lines.Add('*** Monitorign Message Sended '+ FormatDateTime('hh:mm:ss.zzz', now)+' ***')
+    else
+      Memo1.Lines.Add('*** Error to Send Monitorign Message ***');
+  finally
+    JSON.Free;
+  end;
 end;
 
 function TFrmMain.ZapMQHandler(pMessage : TZapJSONMessage;
