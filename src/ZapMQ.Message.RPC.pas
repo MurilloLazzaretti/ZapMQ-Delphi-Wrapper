@@ -3,7 +3,7 @@ unit ZapMQ.Message.RPC;
 interface
 
 uses
-  ZapMQ.Message.JSON, ZapMQ.Handler;
+  ZapMQ.Message.JSON, ZapMQ.Handler, Windows;
 
 type
   TZapRPCMessage = class
@@ -11,45 +11,46 @@ type
     FHandler: TZapMQHandlerRPC;
     FQueueName: string;
     FJSONMessage: TZapJSONMessage;
-    FBirthTime : Cardinal;
+    FBirthTime: Cardinal;
     procedure SetHandler(const Value: TZapMQHandlerRPC);
     procedure SetQueueName(const Value: string);
     procedure SetJSONMessage(const Value: TZapJSONMessage);
   public
-    function IsExpired : Boolean;
-    property QueueName : string read FQueueName write SetQueueName;
-    property Handler : TZapMQHandlerRPC read FHandler write SetHandler;
-    property JSONMessage : TZapJSONMessage read FJSONMessage write SetJSONMessage;
-    constructor Create(const pZapMessage : TZapJSONMessage;
-      const pHandler : TZapMQHandlerRPC; const pQueueName : string); overload;
+    constructor Create(const pZapMessage: TZapJSONMessage;
+      const pHandler: TZapMQHandlerRPC; const pQueueName: string);
     destructor Destroy; override;
+
+    function IsExpired: Boolean;
+
+    property QueueName: string read FQueueName write SetQueueName;
+    property Handler: TZapMQHandlerRPC read FHandler write SetHandler;
+    property JSONMessage: TZapJSONMessage read FJSONMessage write SetJSONMessage;
   end;
 
 implementation
 
-uses
-  Windows;
-
 { TZapRPCMessage }
 
 constructor TZapRPCMessage.Create(const pZapMessage: TZapJSONMessage;
-  const pHandler: TZapMQHandlerRPC; const pQueueName : string);
+  const pHandler: TZapMQHandlerRPC; const pQueueName: string);
 begin
+  inherited Create;
   FHandler := pHandler;
-  JSONMessage := pZapMessage;
-  QueueName := pQueueName;
+  FQueueName := pQueueName;
+  FJSONMessage := pZapMessage;
   FBirthTime := GetTickCount;
 end;
 
 destructor TZapRPCMessage.Destroy;
 begin
-  JSONMessage.Free;
+  FJSONMessage.Free;
   inherited;
 end;
 
 function TZapRPCMessage.IsExpired: Boolean;
 begin
-  Result := (FJSONMessage.TTL > 0) and ((FBirthTime + FJSONMessage.TTL) < GetTickCount);
+  Result := (FJSONMessage.TTL > 0) and
+            (GetTickCount - FBirthTime > FJSONMessage.TTL);
 end;
 
 procedure TZapRPCMessage.SetHandler(const Value: TZapMQHandlerRPC);
@@ -68,3 +69,4 @@ begin
 end;
 
 end.
+

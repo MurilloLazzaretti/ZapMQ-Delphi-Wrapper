@@ -3,129 +3,65 @@ unit ZapMQ.Wrapper;
 interface
 
 uses
-  ZapMQ.Core, ZapMQ.Thread, ZapMQ.Handler, JSON, Generics.Collections,
-  System.Classes, ZapMQ.Message.RPC, ZapMQ.Queue;
+  ZapMQ.Core,
+  ZapMQ.Thread,
+  ZapMQ.Handler,
+  JSON,
+  Generics.Collections,
+  System.Classes,
+  ZapMQ.Message.RPC,
+  ZapMQ.Queue;
 
 type
   TZapMQOccurrenceType = (otInformation, otException, otError);
 
   TZapMQWrapper = class
   private
-    FCore : TZapMQ;
-    FListThreads : TObjectList<TZapMQThread>;
-    FRPCThread : TZapMQRPCThread;
-    FRPCMessages : TObjectList<TZapRPCMessage>;
+    FCore: TZapMQ;
+    FListThreads: TObjectList<TZapMQThread>;
+    FRPCThread: TZapMQRPCThread;
+    FRPCMessages: TObjectList<TZapRPCMessage>;
     FOnRPCExpired: TEventRPCExpired;
     procedure SetOnRPCExpired(const Value: TEventRPCExpired);
-    procedure CheckPriorityThreadAndCreate(const pPriority : TZapMQQueuePriority);
-    procedure CheckPriorityThreadAndFree(const pPriority : TZapMQQueuePriority);
-    function GetIsProcessing: boolean;
+    procedure CheckPriorityThreadAndCreate(const Priority: TZapMQQueuePriority);
+    procedure CheckPriorityThreadAndFree(const Priority: TZapMQQueuePriority);
+    function GetIsProcessing: Boolean;
   public
-    property IsProcessing : boolean read GetIsProcessing;
-    property OnRPCExpired : TEventRPCExpired read FOnRPCExpired write SetOnRPCExpired;
-    procedure SafeStop;
-    function SendMessage(const pQueueName : string; const pMessage : TJSONObject;
-      const pTTL : Word = 0) : boolean;
-    function SendRPCMessage(const pQueueName : string; const pMessage : TJSONObject;
-      const pHandler : TZapMQHandlerRPC; const pTTL : Word = 0) : boolean;
-    procedure Bind(const pQueueName : string; const pHandler : TZapMQHanlder;
-      const pPriority : TZapMQQueuePriority = mqpMedium);
-    procedure UnBind(const pQueueName : string);
-    function IsBinded(const pQueueName : string) : boolean;
-    procedure Log(const pOccurrenceType : TZapMQOccurrenceType;
-      const pOccurrenceOrigin, pTitle, pText : string);
-    constructor Create(const pHost : string; const pPort : integer); overload;
+    constructor Create(const Host: string; const Port: Integer);
     destructor Destroy; override;
+
+    property IsProcessing: Boolean read GetIsProcessing;
+    property OnRPCExpired: TEventRPCExpired read FOnRPCExpired write SetOnRPCExpired;
+
+    procedure SafeStop;
+    procedure Bind(const QueueName: string; const Handler: TZapMQHandler;
+      const Priority: TZapMQQueuePriority = mqpMedium);
+    procedure UnBind(const QueueName: string);
+    function IsBinded(const QueueName: string): Boolean;
+    function SendMessage(const QueueName: string; const Message: TJSONObject;
+      const TTL: Word = 0): Boolean;
+    function SendRPCMessage(const QueueName: string; const Message: TJSONObject;
+      const Handler: TZapMQHandlerRPC; const TTL: Word = 0): Boolean;
+    procedure Log(const OccurrenceType: TZapMQOccurrenceType;
+      const OccurrenceOrigin, Title, Text: string);
   end;
 
 implementation
 
 uses
-  ZapMQ.Message.JSON, System.SysUtils, Vcl.Forms, TypInfo;
+  ZapMQ.Message.JSON,
+  System.SysUtils,
+  Vcl.Forms,
+  TypInfo;
 
 { TZapMQWrapper }
 
-procedure TZapMQWrapper.Bind(const pQueueName: string;
-  const pHandler: TZapMQHanlder; const pPriority : TZapMQQueuePriority = mqpMedium);
-var
-  Queue : TZapMQQueue;
+constructor TZapMQWrapper.Create(const Host: string; const Port: Integer);
 begin
-  if pQueueName <> string.Empty then
-  begin
-    if not IsBinded(pQueueName) then
-    begin
-      Queue := TZapMQQueue.Create;
-      Queue.Name := pQueueName;
-      Queue.Handler := pHandler;
-      Queue.Priority := pPriority;
-      FCore.Queues.Add(Queue);
-      CheckPriorityThreadAndCreate(pPriority);
-    end;
-  end
-  else
-    raise Exception.Create('You cannot bind an unnamed Queue');
-end;
-
-procedure TZapMQWrapper.CheckPriorityThreadAndCreate(
-  const pPriority: TZapMQQueuePriority);
-var
-  ThreadAlreadyRunnig : boolean;
-  Thread: TZapMQThread;
-  NewThread : TZapMQThread;
-begin
-  ThreadAlreadyRunnig := False;
-  for Thread in FListThreads do
-  begin
-    if Thread.QueuePriority = pPriority then
-    begin
-      ThreadAlreadyRunnig := True;
-      Break;
-    end;
-  end;
-  if not ThreadAlreadyRunnig then
-  begin
-    NewThread := TZapMQThread.Create(FCore, pPriority);
-    FListThreads.Add(NewThread);
-    NewThread.Start;
-  end;
-end;
-
-procedure TZapMQWrapper.CheckPriorityThreadAndFree(
-  const pPriority: TZapMQQueuePriority);
-var
-  Queue: TZapMQQueue;
-  ThreadStilRunnig : boolean;
-  Thread: TZapMQThread;
-begin
-  ThreadStilRunnig := False;
-  for Queue in FCore.Queues do
-  begin
-    if Queue.Priority = pPriority then
-    begin
-      ThreadStilRunnig := True;
-      Break;
-    end;
-  end;
-  if not ThreadStilRunnig then
-  begin
-    for Thread in FListThreads do
-    begin
-      if Thread.QueuePriority = pPriority then
-      begin
-        Thread.Stop;
-        FListThreads.Remove(Thread);
-        Break;
-      end;
-    end;
-  end;
-end;
-
-constructor TZapMQWrapper.Create(const pHost: string; const pPort: integer);
-begin
-  FCore := TZapMQ.Create(pHost, pPort);
+  FCore := TZapMQ.Create(Host, Port);
   FRPCMessages := TObjectList<TZapRPCMessage>.Create(True);
   FListThreads := TObjectList<TZapMQThread>.Create(True);
-  FRPCThread := TZapMQRPCThread.Create(pHost, pPort, FRPCMessages);
+  FRPCThread := TZapMQRPCThread.Create(Host, Port, FRPCMessages);
   FRPCThread.Start;
 end;
 
@@ -135,63 +71,104 @@ var
 begin
   FRPCThread.Stop;
   FRPCThread.Free;
+
   for Thread in FListThreads do
-  begin
     Thread.Stop;
-  end;
+
   FListThreads.Clear;
   FListThreads.Free;
   FRPCMessages.Free;
   FCore.Free;
+
   inherited;
 end;
 
-function TZapMQWrapper.GetIsProcessing: boolean;
+procedure TZapMQWrapper.Bind(const QueueName: string; const Handler: TZapMQHandler;
+  const Priority: TZapMQQueuePriority);
+var
+  Queue: TZapMQQueue;
+begin
+  if QueueName.IsEmpty then
+    raise Exception.Create('You cannot bind an unnamed Queue');
+
+  if not IsBinded(QueueName) then
+  begin
+    Queue := TZapMQQueue.Create;
+    Queue.Name := QueueName;
+    Queue.Handler := Handler;
+    Queue.Priority := Priority;
+    FCore.Queues.Add(Queue);
+    CheckPriorityThreadAndCreate(Priority);
+  end;
+end;
+
+procedure TZapMQWrapper.CheckPriorityThreadAndCreate(const Priority: TZapMQQueuePriority);
 var
   Thread: TZapMQThread;
-  ThreadRunnig : boolean;
 begin
-  ThreadRunnig := False;
   for Thread in FListThreads do
-  begin
-    if Thread.IsProcessing then
-    begin
-      ThreadRunnig := True;
-      Break;
-    end;
-  end;
-  Result := ThreadRunnig or FRPCThread.IsProcessing;
+    if Thread.QueuePriority = Priority then
+      Exit;
+
+  Thread := TZapMQThread.Create(FCore, Priority);
+  FListThreads.Add(Thread);
+  Thread.Start;
 end;
 
-function TZapMQWrapper.IsBinded(const pQueueName: string): boolean;
+procedure TZapMQWrapper.CheckPriorityThreadAndFree(const Priority: TZapMQQueuePriority);
 var
-  Queue : TZapMQQueue;
+  Queue: TZapMQQueue;
+  Thread: TZapMQThread;
 begin
-  Result := False;
   for Queue in FCore.Queues do
-  begin
-    if Queue.Name = pQueueName then
+    if Queue.Priority = Priority then
+      Exit;
+
+  for Thread in FListThreads do
+    if Thread.QueuePriority = Priority then
     begin
-      Result := True;
+      Thread.Stop;
+      FListThreads.Remove(Thread);
       Break;
     end;
-  end;
 end;
 
-procedure TZapMQWrapper.Log(const pOccurrenceType: TZapMQOccurrenceType;
-  const pOccurrenceOrigin, pTitle, pText: string);
+function TZapMQWrapper.GetIsProcessing: Boolean;
 var
-  JsonObject : TJSONObject;
+  Thread: TZapMQThread;
+begin
+  for Thread in FListThreads do
+    if Thread.IsProcessing then
+      Exit(True);
+
+  Result := FRPCThread.IsProcessing;
+end;
+
+function TZapMQWrapper.IsBinded(const QueueName: string): Boolean;
+var
+  Queue: TZapMQQueue;
+begin
+  for Queue in FCore.Queues do
+    if Queue.Name = QueueName then
+      Exit(True);
+
+  Result := False;
+end;
+
+procedure TZapMQWrapper.Log(const OccurrenceType: TZapMQOccurrenceType;
+  const OccurrenceOrigin, Title, Text: string);
+var
+  JsonObject: TJSONObject;
 begin
   JsonObject := TJSONObject.Create;
   try
     JsonObject.AddPair('OccurrenceDate', TJSONString.Create(DateTimeToStr(Now)));
-    JsonObject.AddPair('OccurrenceOrigin', TJSONString.Create(pOccurrenceOrigin));
+    JsonObject.AddPair('OccurrenceOrigin', TJSONString.Create(OccurrenceOrigin));
     JsonObject.AddPair('ApplicationName', TJSONString.Create(ExtractFileName(Application.ExeName)));
-    JsonObject.AddPair('Title', TJSONString.Create(pTitle));
-    JsonObject.AddPair('Text', TJSONString.Create(pText));
+    JsonObject.AddPair('Title', TJSONString.Create(Title));
+    JsonObject.AddPair('Text', TJSONString.Create(Text));
     JsonObject.AddPair('OccurrenceType', TJSONString.Create(
-      GetEnumName(TypeInfo(TZapMQOccurrenceType), integer(pOccurrenceType))));
+      GetEnumName(TypeInfo(TZapMQOccurrenceType), Ord(OccurrenceType))));
     SendMessage('LogsFactory', JsonObject);
   finally
     JsonObject.Free;
@@ -201,85 +178,106 @@ end;
 procedure TZapMQWrapper.SafeStop;
 var
   Thread: TZapMQThread;
+  TimeoutCount: Integer;
 begin
   for Thread in FListThreads do
-  begin
     Thread.SafeStop := True;
-  end;
+
   FRPCThread.SafeStop := True;
-  Sleep(150);
+
+  TimeoutCount := 0;
   while IsProcessing do
   begin
     Application.ProcessMessages;
+    Sleep(10);
+    Inc(TimeoutCount);
+    if TimeoutCount > 300 then
+      Break;
+  end;
+
+  for Thread in FListThreads do
+  begin
+    if not Thread.Finished then
+    begin
+      Thread.Terminate;
+      Thread.WaitFor;
+    end;
+  end;
+
+  if Assigned(FRPCThread) then
+  begin
+    if not FRPCThread.Finished then
+    begin
+      FRPCThread.Terminate;
+      FRPCThread.WaitFor;
+    end;
   end;
 end;
 
-function TZapMQWrapper.SendMessage(const pQueueName: string;
-  const pMessage: TJSONObject; const pTTL: Word): boolean;
+function TZapMQWrapper.SendMessage(const QueueName: string; const Message: TJSONObject;
+  const TTL: Word): Boolean;
 var
-  ZapMessage : TZapJSONMessage;
+  ZapMessage: TZapJSONMessage;
 begin
-  if pQueueName = string.Empty then
+  if QueueName.IsEmpty then
     raise Exception.Create('Inform the Queue name');
-  if not IsBinded(pQueueName) then
-  begin
-    ZapMessage := TZapJSONMessage.Create;
-    try
-      ZapMessage.Body := TJSONObject.ParseJSONValue(
-        TEncoding.ASCII.GetBytes(pMessage.ToString), 0) as TJSONObject;
-      ZapMessage.RPC := False;
-      ZapMessage.TTL := pTTL;
-      try
-        FCore.SendMessage(pQueueName, ZapMessage);
-        Result := True;
-      except
-        Result := False;
-      end;
-    finally
-      ZapMessage.Free;
-    end;
-  end
-  else
-    raise Exception.Create('You cannot send message to a Queue self binded');
-end;
 
-function TZapMQWrapper.SendRPCMessage(const pQueueName : string; const pMessage : TJSONObject;
-  const pHandler : TZapMQHandlerRPC; const pTTL : Word = 0) : boolean;
-var
-  JSONMessage : TZapJSONMessage;
-  ZapRPCMessage : TZapRPCMessage;
-begin
-  if pQueueName = string.Empty then
-    raise Exception.Create('Inform the Queue name');
-  if not IsBinded(pQueueName) then
-  begin
-    JSONMessage := TZapJSONMessage.Create;
-    JSONMessage.Body := TJSONObject.ParseJSONValue(
-      TEncoding.ASCII.GetBytes(pMessage.ToString), 0) as TJSONObject;
-    JSONMessage.RPC := True;
-    JSONMessage.TTL := pTTL;
+  if IsBinded(QueueName) then
+    raise Exception.Create('You cannot send message to a Queue self binded');
+
+  ZapMessage := TZapJSONMessage.Create;
+  try
+    ZapMessage.Body := TJSONObject.ParseJSONValue(
+      TEncoding.ASCII.GetBytes(Message.ToString), 0) as TJSONObject;
+    ZapMessage.RPC := False;
+    ZapMessage.TTL := TTL;
+
     try
-      JSONMessage.Id := FCore.SendMessage(pQueueName, JSONMessage);
-      if JSONMessage.Id <> string.Empty then
-      begin
-        FRPCThread.EventRPCExpired := FOnRPCExpired;
-        ZapRPCMessage := TZapRPCMessage.Create(JSONMessage, pHandler, pQueueName);
-        FRPCMessages.Add(ZapRPCMessage);
-        FRPCThread.SyncEvent.SetEvent;
-        Result := True;
-      end
-      else
-      begin
-        JSONMessage.Free;
-        Result := False;
-      end;
+      FCore.SendMessage(QueueName, ZapMessage);
+      Result := True;
     except
-      JSONMessage.Free;
       Result := False;
     end;
-  end
-  else
+  finally
+    ZapMessage.Free;
+  end;
+end;
+
+function TZapMQWrapper.SendRPCMessage(const QueueName: string; const Message: TJSONObject;
+  const Handler: TZapMQHandlerRPC; const TTL: Word): Boolean;
+var
+  JSONMessage: TZapJSONMessage;
+  ZapRPCMessage: TZapRPCMessage;
+begin
+  if QueueName.IsEmpty then
+    raise Exception.Create('Inform the Queue name');
+
+  if IsBinded(QueueName) then
     raise Exception.Create('You cannot send message to a Queue self binded');
+
+  JSONMessage := TZapJSONMessage.Create;
+  JSONMessage.Body := TJSONObject.ParseJSONValue(
+    TEncoding.ASCII.GetBytes(Message.ToString), 0) as TJSONObject;
+  JSONMessage.RPC := True;
+  JSONMessage.TTL := TTL;
+
+  try
+    JSONMessage.Id := FCore.SendMessage(QueueName, JSONMessage);
+    if JSONMessage.Id.IsEmpty then
+    begin
+      JSONMessage.Free;
+      Exit(False);
+    end;
+
+    FRPCThread.EventRPCExpired := FOnRPCExpired;
+    ZapRPCMessage := TZapRPCMessage.Create(JSONMessage, Handler, QueueName);
+    FRPCMessages.Add(ZapRPCMessage);
+    FRPCThread.SyncEvent.SetEvent;
+    Result := True;
+  except
+    JSONMessage.Free;
+    Result := False;
+  end;
 end;
 
 procedure TZapMQWrapper.SetOnRPCExpired(const Value: TEventRPCExpired);
@@ -287,11 +285,11 @@ begin
   FOnRPCExpired := Value;
 end;
 
-procedure TZapMQWrapper.UnBind(const pQueueName: string);
+procedure TZapMQWrapper.UnBind(const QueueName: string);
 var
-  Queue : TZapMQQueue;
+  Queue: TZapMQQueue;
 begin
-  Queue := FCore.FindQueue(pQueueName);
+  Queue := FCore.FindQueue(QueueName);
   if Assigned(Queue) then
   begin
     FCore.Queues.Remove(Queue);
@@ -300,3 +298,4 @@ begin
 end;
 
 end.
+

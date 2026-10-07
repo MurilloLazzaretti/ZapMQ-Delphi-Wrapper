@@ -3,56 +3,61 @@ unit ZapMQ.Message.JSON;
 interface
 
 uses
-  JSON;
+  JSON, System.SysUtils;
 
 type
   TZapJSONMessage = class
   private
     FBody: TJSONObject;
     FId: string;
-    FRPC: boolean;
+    FRPC: Boolean;
     FTTL: Word;
     procedure SetBody(const Value: TJSONObject);
     procedure SetId(const Value: string);
-    procedure SetRPC(const Value: boolean);
+    procedure SetRPC(const Value: Boolean);
     procedure SetTTL(const Value: Word);
   public
-    property Id : string read FId write SetId;
-    property Body : TJSONObject read FBody write SetBody;
-    property RPC : boolean read FRPC write SetRPC;
-    property TTL : Word read FTTL write SetTTL;
-    function ToJSON : TJSONObject;
+    constructor Create;
     destructor Destroy; override;
-    class function FromJSON(const pJSONString : string) : TZapJSONMessage;
+    function ToJSON: TJSONObject;
+    class function FromJSON(const pJSONString: string): TZapJSONMessage;
+
+    property Id: string read FId write SetId;
+    property Body: TJSONObject read FBody write SetBody;
+    property RPC: Boolean read FRPC write SetRPC;
+    property TTL: Word read FTTL write SetTTL;
   end;
 
 implementation
 
-uses
-  System.SysUtils;
-
 { TZapJSONMessage }
+
+constructor TZapJSONMessage.Create;
+begin
+  inherited;
+  FBody := nil;
+  FId := '';
+  FRPC := False;
+  FTTL := 0;
+end;
 
 destructor TZapJSONMessage.Destroy;
 begin
-  if Assigned(Body) then
-    Body.Free;
+  FBody.Free;
   inherited;
 end;
 
-class function TZapJSONMessage.FromJSON(
-  const pJSONString: string): TZapJSONMessage;
+class function TZapJSONMessage.FromJSON(const pJSONString: string): TZapJSONMessage;
 var
-  JSON : TJSONObject;
+  JSON: TJSONObject;
 begin
-  JSON := TJSONObject.ParseJSONValue(
-    TEncoding.ASCII.GetBytes(pJSONString), 0) as TJSONObject;
+  JSON := TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(pJSONString), 0) as TJSONObject;
   try
     Result := TZapJSONMessage.Create;
     Result.FId := JSON.GetValue<string>('Id');
     Result.FBody := TJSONObject.ParseJSONValue(
       TEncoding.ASCII.GetBytes(JSON.GetValue<TJSONObject>('Body').ToString), 0) as TJSONObject;
-    Result.FRPC := JSON.GetValue<boolean>('RPC');
+    Result.FRPC := JSON.GetValue<Boolean>('RPC');
     Result.FTTL := JSON.GetValue<Word>('TTL');
   finally
     JSON.Free;
@@ -69,7 +74,7 @@ begin
   FId := Value;
 end;
 
-procedure TZapJSONMessage.SetRPC(const Value: boolean);
+procedure TZapJSONMessage.SetRPC(const Value: Boolean);
 begin
   FRPC := Value;
 end;
@@ -83,10 +88,10 @@ function TZapJSONMessage.ToJSON: TJSONObject;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('Id', TJSONString.Create(FId));
-  Result.AddPair('Body', TJSONObject.ParseJSONValue(
-    TEncoding.ASCII.GetBytes(Body.ToString), 0) as TJSONValue);
+  Result.AddPair('Body', TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(FBody.ToString), 0));
   Result.AddPair('RPC', TJSONBool.Create(FRPC));
   Result.AddPair('TTL', TJSONNumber.Create(FTTL));
 end;
 
 end.
+
